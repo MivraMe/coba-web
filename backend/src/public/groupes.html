@@ -11,17 +11,39 @@
     <a href="/dashboard" class="nav-brand">
       <img src="/logo/notesQC_white.png" alt="NotesQC" class="nav-logo">
     </a>
-    <button id="burgerBtn" class="burger-btn" aria-label="Menu">
-      <span></span><span></span><span></span>
-    </button>
     <div class="nav-links" id="navMenu">
-      <a href="/dashboard" class="nav-link">Tableau de bord</a>
-      <a href="/groupes" class="nav-link">Groupes</a>
-      <a href="/compte" class="nav-link">Mon compte</a>
+      <a href="/dashboard" class="nav-link">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Tableau de bord
+      </a>
+      <a href="/groupes" class="nav-link active">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"/></svg>
+        Groupes
+      </a>
+      <a href="/compte" class="nav-link">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>
+        Mon compte
+      </a>
+      <div class="nav-sep"></div>
       <span class="nav-email"></span>
-      <button class="nav-logout">Déconnexion</button>
+      <button class="nav-logout">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"/></svg>
+        Déconnexion
+      </button>
+      <!-- Mobile only -->
+      <div class="nav-mobile-sep"></div>
+      <div class="nav-mobile-user">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+        <span class="nav-email-mobile"></span>
+      </div>
     </div>
+    <button id="burgerBtn" class="burger-btn" aria-label="Menu" aria-expanded="false">
+      <span class="burger-line"></span>
+      <span class="burger-line"></span>
+      <span class="burger-line"></span>
+    </button>
   </nav>
+  <div class="nav-overlay" id="navOverlay"></div>
 
   <div class="page">
     <div class="container">
@@ -42,14 +64,31 @@
     (function() {
       var btn = document.getElementById('burgerBtn');
       var menu = document.getElementById('navMenu');
+      var overlay = document.getElementById('navOverlay');
       if (!btn || !menu) return;
+      function openMenu() {
+        menu.classList.add('open');
+        btn.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
+        if (overlay) overlay.classList.add('open');
+        document.body.style.overflow = 'hidden';
+      }
+      function closeMenu() {
+        menu.classList.remove('open');
+        btn.classList.remove('open');
+        btn.setAttribute('aria-expanded', 'false');
+        if (overlay) overlay.classList.remove('open');
+        document.body.style.overflow = '';
+      }
       btn.addEventListener('click', function(e) {
         e.stopPropagation();
-        menu.classList.toggle('open');
+        menu.classList.contains('open') ? closeMenu() : openMenu();
       });
-      document.addEventListener('click', function(e) {
-        if (!e.target.closest('#main-nav')) menu.classList.remove('open');
+      if (overlay) overlay.addEventListener('click', closeMenu);
+      menu.querySelectorAll('.nav-link').forEach(function(l) {
+        l.addEventListener('click', function() { if (window.innerWidth <= 768) closeMenu(); });
       });
+      document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeMenu(); });
     })();
   </script>
 </body>
