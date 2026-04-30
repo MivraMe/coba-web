@@ -221,80 +221,19 @@
       <!-- ── TODO ── -->
       <div id="tab-todo" class="hidden">
         <div class="admin-section">
-          <h3>Fonctionnalités planifiées</h3>
-          <p style="font-size:.875rem;color:var(--text-2);margin-bottom:1.25rem">Liste des fonctionnalités en cours de planification pour NotesQC.</p>
-          <div class="todo-grid">
-            <div class="todo-card">
-              <div class="todo-card-title">Comparaison entre sessions scolaires</div>
-              <span class="badge badge-neutral">Planifié</span>
-              <div class="todo-card-desc">Statistiques côte à côte pour deux années scolaires (ex. 2024-2025 vs 2025-2026) afin de visualiser la progression.</div>
-            </div>
-            <div class="todo-card">
-              <div class="todo-card-title">Profil utilisateur étendu</div>
-              <span class="badge badge-neutral">Planifié</span>
-              <div class="todo-card-desc">Prénom, nom et code permanent obtenus via une route API dédiée du portail collégial — aucune saisie manuelle.</div>
-            </div>
-            <div class="todo-card">
-              <div class="todo-card-title">Chat entre membres d'un groupe</div>
-              <span class="badge badge-neutral">Planifié</span>
-              <div class="todo-card-desc">Messagerie simple permettant aux membres d'un même groupe de communiquer directement dans l'application.</div>
-            </div>
-            <div class="todo-card">
-              <div class="todo-card-title">Invitations à rejoindre l'application</div>
-              <span class="badge badge-neutral">Planifié</span>
-              <div class="todo-card-desc">Inviter des étudiants à créer un compte NotesQC via un lien ou un courriel personnalisé.</div>
-            </div>
-            <div class="todo-card">
-              <div class="todo-card-title">Double authentification (2FA)</div>
-              <span class="badge badge-neutral">Planifié</span>
-              <div class="todo-card-desc">Renforcement de la sécurité via une authentification à deux facteurs TOTP (ex. Google Authenticator).</div>
-            </div>
-            <div class="todo-card">
-              <div class="todo-card-title">Push notifications mobiles</div>
-              <span class="badge badge-neutral">Planifié</span>
-              <div class="todo-card-desc">Notifications push natives via une future application mobile NotesQC disponible sur iOS et Android.</div>
-            </div>
-            <div class="todo-card">
-              <div class="todo-card-title">Masquer des cours</div>
-              <span class="badge badge-neutral">Planifié</span>
-              <div class="todo-card-desc">Masquer certains cours du dashboard. Les cours masqués sont enregistrés en BD et restent accessibles via un filtre dédié.</div>
-            </div>
-            <div class="todo-card">
-              <div class="todo-card-title">Historique des changements de notes</div>
-              <span class="badge badge-neutral">Planifié</span>
-              <div class="todo-card-desc">Conserver l'ancienne valeur dans un historique si une note est modifiée lors d'une synchronisation. Afficher un badge "Modifié" dans le détail.</div>
-            </div>
-            <div class="todo-card">
-              <div class="todo-card-title">Simulateur de note</div>
-              <span class="badge badge-neutral">Planifié</span>
-              <div class="todo-card-desc">Entrer des notes hypothétiques pour les évaluations sans résultat et voir en temps réel l'impact sur la moyenne finale du cours.</div>
-            </div>
-            <div class="todo-card">
-              <div class="todo-card-title">Objectif de note par cours</div>
-              <span class="badge badge-neutral">Planifié</span>
-              <div class="todo-card-desc">Définir une cible en % pour chaque cours. Afficher une barre de progression et indiquer si l'objectif est encore atteignable.</div>
-            </div>
-            <div class="todo-card">
-              <div class="todo-card-title">Tableau de progression</div>
-              <span class="badge badge-neutral">Planifié</span>
-              <div class="todo-card-desc">Graphique en ligne sur le dashboard montrant l'évolution de la moyenne générale dans le temps, basé sur un snapshot à chaque synchro.</div>
-            </div>
-            <div class="todo-card">
-              <div class="todo-card-title">Meilleure note du groupe</div>
-              <span class="badge badge-neutral">Planifié</span>
-              <div class="todo-card-desc">Afficher anonymement la meilleure note obtenue pour chaque évaluation dans le détail d'un groupe (pas de nom, juste la valeur).</div>
-            </div>
-            <div class="todo-card">
-              <div class="todo-card-title">Classement optionnel dans un groupe</div>
-              <span class="badge badge-neutral">Planifié</span>
-              <div class="todo-card-desc">Option opt-in dans Mon compte pour apparaître dans un classement par moyenne au sein du groupe, visible uniquement par ses membres.</div>
-            </div>
-            <div class="todo-card">
-              <div class="todo-card-title">Backup automatique</div>
-              <span class="badge badge-neutral">Planifié</span>
-              <div class="todo-card-desc">Sauvegarde automatique de la base de données chaque nuit vers un NAS ou un stockage distant sécurisé.</div>
-            </div>
+          <div class="flex-between mb-1">
+            <h3 style="margin-bottom:0">Fonctionnalités planifiées</h3>
+            <button class="btn btn-sm btn-primary superadmin-only" id="todo-add-btn">+ Ajouter</button>
           </div>
+          <p style="font-size:.875rem;color:var(--text-2);margin-bottom:1rem">Liste des fonctionnalités en cours de planification pour NotesQC.</p>
+          <div style="display:flex;gap:.35rem;flex-wrap:wrap;margin-bottom:1.25rem">
+            <button class="year-btn active" data-todo-filter="all">Tous</button>
+            <button class="year-btn" data-todo-filter="Planifié">Planifié</button>
+            <button class="year-btn" data-todo-filter="En cours">En cours</button>
+            <button class="year-btn" data-todo-filter="Complété">Complété</button>
+            <button class="year-btn" data-todo-filter="Annulé">Annulé</button>
+          </div>
+          <div class="todo-grid" id="todo-grid"><div style="color:var(--text-3);padding:.5rem">Chargement…</div></div>
         </div>
       </div>
 
@@ -385,6 +324,81 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" id="edit-modal-cancel">Annuler</button>
         <button class="btn btn-primary" id="edit-modal-save">Sauvegarder</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MODAL TODO ── -->
+  <div id="todo-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="todo-modal-heading">Nouvel élément</h3>
+        <button class="modal-close-btn" id="todo-modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="todo-modal-alert" class="alert alert-hidden mb-1"></div>
+        <input type="hidden" id="todo-modal-id">
+        <div class="form-group">
+          <label class="form-label">Titre</label>
+          <input type="text" class="form-control" id="todo-modal-title-input" placeholder="Titre de la fonctionnalité">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea class="form-control" id="todo-modal-desc" rows="3" placeholder="Description…"></textarea>
+        </div>
+        <div class="config-grid">
+          <div class="form-group">
+            <label class="form-label">Statut</label>
+            <select class="form-control" id="todo-modal-status">
+              <option>Planifié</option>
+              <option>En cours</option>
+              <option>Complété</option>
+              <option>Annulé</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Priorité</label>
+            <select class="form-control" id="todo-modal-priority">
+              <option>Basse</option>
+              <option>Normale</option>
+              <option>Haute</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="todo-modal-cancel">Annuler</button>
+        <button class="btn btn-primary" id="todo-modal-save">Sauvegarder</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MODAL CONTACTER UTILISATEUR ── -->
+  <div id="contact-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Contacter l'utilisateur</h3>
+        <button class="modal-close-btn" id="contact-modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="contact-modal-alert" class="alert alert-hidden mb-1"></div>
+        <p class="text-sm text-muted mb-1" style="margin-bottom:.75rem">Destinataire : <strong id="contact-modal-email"></strong></p>
+        <div class="form-group">
+          <label class="form-label">Canal</label>
+          <select class="form-control" id="contact-modal-channel">
+            <option value="email">Courriel</option>
+            <option value="sms">SMS</option>
+            <option value="both">Les deux</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Message</label>
+          <textarea class="form-control" id="contact-modal-msg" rows="4" placeholder="Votre message…"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="contact-modal-cancel">Annuler</button>
+        <button class="btn btn-primary" id="contact-modal-send">Envoyer</button>
       </div>
     </div>
   </div>

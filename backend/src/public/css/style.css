@@ -220,6 +220,7 @@ html.dark .alert-warning { color: #fcd34d; border-color: #78350f; }
 .badge-success { background: var(--success-l); color: var(--success); }
 .badge-warning { background: var(--warning-l); color: var(--warning); }
 .badge-neutral { background: var(--border); color: var(--text-2); }
+.badge-danger { background: var(--danger-l); color: var(--danger); }
 
 /* ── ONBOARDING ── */
 .onboarding-wrap {
