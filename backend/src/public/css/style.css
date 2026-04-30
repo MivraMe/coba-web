@@ -40,12 +40,12 @@ a:hover { text-decoration: underline; }
 /* ── NAV ── */
 .nav, .main-nav {
   position: fixed; top: 0; left: 0; right: 0;
+  height: 64px;
   background: linear-gradient(90deg, #1e3a8a 0%, #1e40af 100%);
-  display: flex; align-items: center; flex-wrap: wrap;
+  display: flex; align-items: center;
   padding: 0 1.75rem;
   z-index: 1000;
   box-shadow: 0 1px 0 rgba(255,255,255,.08), 0 4px 16px rgba(0,0,0,.25);
-  min-height: 64px;
 }
 .nav-brand { display: flex; align-items: center; text-decoration: none; flex-shrink: 0; height: 64px; }
 .nav-logo { height: 42px; display: block; }
@@ -600,13 +600,15 @@ tr:hover td { background: var(--bg); }
   .nav-email { display: none; }
   .nav-links {
     display: none;
-    width: 100%;
-    height: auto;
+    position: absolute;
+    top: 64px;
+    left: 0; right: 0;
     flex-direction: column; align-items: stretch;
-    padding: .25rem 0 .75rem;
+    background: linear-gradient(160deg, #1e3a8a 0%, #1e40af 60%, #1d4ed8 100%);
+    padding: .5rem .75rem .75rem;
     gap: .1rem;
-    margin-left: 0;
-    border-top: 1px solid rgba(255,255,255,.15);
+    box-shadow: 0 8px 24px rgba(0,0,0,.35);
+    z-index: 999;
   }
   .nav-links.open { display: flex; }
   .nav-link {
