@@ -81,7 +81,7 @@ a:hover { text-decoration: underline; }
 }
 .nav-logout:hover { background: rgba(255,255,255,.25); }
 .nav-hamburger {
-  display: none;
+  display: flex;
   flex-direction: column; justify-content: center; align-items: center;
   gap: 5px;
   background: none; border: none; cursor: pointer;
@@ -555,10 +555,13 @@ tr:hover td { background: var(--bg); }
 @media (max-width: 640px) { .config-grid { grid-template-columns: 1fr; } }
 
 /* ── RESPONSIVE ── */
+@media (min-width: 769px) {
+  .nav-hamburger { display: none; }
+}
+
 @media (max-width: 768px) {
   .nav { padding: 0 1rem; }
   .nav-email { display: none; }
-  .nav-hamburger { display: flex; }
 
   /* Mobile dropdown: hidden by default, shown when .nav-open */
   .nav-links {
