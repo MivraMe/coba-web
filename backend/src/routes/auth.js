@@ -19,11 +19,12 @@ router.post('/register', async (req, res) => {
 
   try {
     const normalizedEmail = email.toLowerCase().trim();
-    const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase().trim();
+    const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase().trim() || null;
 
     // First user ever, or matches ADMIN_EMAIL env var → gets admin
+    // Use !! to guarantee a proper boolean (avoids passing '' to PostgreSQL BOOLEAN)
     const { rows: existing } = await pool.query('SELECT 1 FROM users LIMIT 1');
-    const isAdmin = existing.length === 0 || (adminEmail && normalizedEmail === adminEmail);
+    const isAdmin = !!(existing.length === 0 || (adminEmail && normalizedEmail === adminEmail));
 
     const hash = await bcrypt.hash(password, SALT_ROUNDS);
     const { rows } = await pool.query(

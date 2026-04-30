@@ -411,8 +411,10 @@ function renderChart(data) {
 
   const isMoyenne = chartMode === 'moyenne';
 
-  const personalData = pts.map(p => ({ x: p.cumulative_weight_pct, y: isMoyenne ? p.personal_running_avg : p.personal_pct }));
-  const groupData    = pts.map(p => ({ x: p.cumulative_weight_pct, y: isMoyenne ? p.group_running_avg    : p.group_median_pct }));
+  // In cumulative-average mode, anchor the line at the origin (0%, 0%)
+  const origin = isMoyenne ? [{ x: 0, y: 0 }] : [];
+  const personalData = [...origin, ...pts.map(p => ({ x: p.cumulative_weight_pct, y: isMoyenne ? p.personal_running_avg : p.personal_pct }))];
+  const groupData    = [...origin, ...pts.map(p => ({ x: p.cumulative_weight_pct, y: isMoyenne ? p.group_running_avg    : p.group_median_pct }))];
 
   gradeChart = new Chart(canvas, {
     type: 'line',
@@ -452,7 +454,9 @@ function renderChart(data) {
           callbacks: {
             label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y !== null ? ctx.parsed.y.toFixed(1) + '%' : '—'}`,
             title: ctx => {
-              const p = pts[ctx[0].dataIndex];
+              const idx = ctx[0].dataIndex - (isMoyenne ? 1 : 0);
+              if (idx < 0) return 'Début';
+              const p = pts[idx];
               return `${p.title} (${p.cumulative_weight_pct}% de la note finale)`;
             },
           },

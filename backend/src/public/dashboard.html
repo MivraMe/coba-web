@@ -71,10 +71,12 @@
             Synchroniser
           </button>
         </div>
-        <div id="global-stats-row" class="global-stats-row">
-          <div style="opacity:.6;font-size:.9rem">Chargement…</div>
+        <div style="display:flex;align-items:center;gap:1.5rem">
+          <div id="global-stats-row" class="global-stats-row" style="flex:1">
+            <div style="opacity:.6;font-size:.9rem">Chargement…</div>
+          </div>
+          <canvas id="sparkline" width="160" height="60" style="flex-shrink:0;opacity:.85"></canvas>
         </div>
-        <canvas id="sparkline" width="180" height="44" style="display:block;margin-top:.5rem;opacity:.75"></canvas>
         <button class="global-expand-btn" id="global-expand-btn">▼ Afficher plus</button>
         <div class="global-expanded hidden" id="global-expanded">
           <div class="global-chart-wrap">
@@ -95,10 +97,6 @@
       <!-- Controls row -->
       <div class="flex-between mb-2" id="controls-row" style="display:none">
         <span class="text-sm text-muted">Cliquez sur un cours pour voir le détail</span>
-        <div class="toggle-bar">
-          <button class="toggle-btn active" id="toggle-avg" data-mode="moyenne">Moyenne</button>
-          <button class="toggle-btn" id="toggle-med" data-mode="mediane">Médiane</button>
-        </div>
       </div>
 
       <!-- Courses grid -->
@@ -112,6 +110,10 @@
           <div>
             <div class="course-code" id="detail-code"></div>
             <div class="detail-title" id="detail-name"></div>
+          </div>
+          <div class="toggle-bar">
+            <button class="toggle-btn active" id="toggle-avg">Moyenne</button>
+            <button class="toggle-btn" id="toggle-med">Médiane</button>
           </div>
           <button class="btn btn-ghost btn-sm" id="detail-close">✕ Fermer</button>
         </div>
