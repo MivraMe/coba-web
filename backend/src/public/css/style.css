@@ -508,6 +508,40 @@ tr:hover td { background: var(--bg); }
 .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem 1.25rem; }
 @media (max-width: 640px) { .config-grid { grid-template-columns: 1fr; } }
 
+/* ── MODAL ── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.45);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 400; padding: 1rem;
+}
+.modal-card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  width: 100%; max-width: 560px;
+  max-height: 90vh; overflow-y: auto;
+  display: flex; flex-direction: column;
+}
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; background: var(--surface); z-index: 1;
+}
+.modal-header h3 { font-size: 1rem; font-weight: 700; margin: 0; }
+.modal-close-btn {
+  background: none; border: none; cursor: pointer; font-size: 1.25rem;
+  color: var(--text-2); line-height: 1; padding: .2rem .4rem; border-radius: 4px;
+}
+.modal-close-btn:hover { background: var(--bg); }
+.modal-body { padding: 1.25rem; flex: 1; }
+.modal-footer {
+  padding: .75rem 1.25rem 1.25rem;
+  display: flex; gap: .5rem; justify-content: flex-end;
+  border-top: 1px solid var(--border);
+}
+
 /* ── RESPONSIVE ── */
 @media (max-width: 768px) {
   .nav { padding:0 1rem; }

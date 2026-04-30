@@ -10,6 +10,7 @@ const { syncUserData, runScheduledRefresh } = require('../services/dataSync');
 const { sendNewGradeEmail } = require('../services/notifications/email');
 const { sendSms } = require('../services/notifications/sms');
 const { fetchNotes } = require('../services/portalApi');
+const { encrypt } = require('../services/crypto');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -186,8 +187,8 @@ router.get('/deploy', requireSuperAdmin, (req, res) => {
 router.get('/users', async (req, res) => {
   try {
     const { rows: users } = await pool.query(`
-      SELECT u.id, u.email, u.created_at, u.is_admin, u.role, u.notify_email, u.notify_sms,
-             u.portal_username,
+      SELECT u.id, u.email, u.created_at, u.is_admin, u.role,
+             u.notify_email, u.notify_sms, u.phone, u.portal_username,
              MAX(gm.refreshed_at) AS last_synced
       FROM users u
       LEFT JOIN group_members gm ON gm.user_id = u.id
@@ -263,13 +264,86 @@ router.delete('/users/:id', async (req, res) => {
 // POST /api/admin/users/:id/reset-password
 router.post('/users/:id/reset-password', async (req, res) => {
   try {
-    const { rows } = await pool.query('SELECT id FROM users WHERE id = $1', [req.params.id]);
+    const { rows } = await pool.query('SELECT id, phone, notify_sms FROM users WHERE id = $1', [req.params.id]);
     if (rows.length === 0) return res.status(404).json({ error: 'Utilisateur introuvable' });
+    const user = rows[0];
     const tempPassword = crypto.randomBytes(8).toString('hex');
     const hash = await bcrypt.hash(tempPassword, 12);
     await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, req.params.id]);
-    res.json({ ok: true, temp_password: tempPassword });
+
+    let sms_sent = false;
+    if (user.notify_sms && user.phone) {
+      const msg = `NotesQC - Votre mot de passe temporaire est : ${tempPassword}. Connectez-vous et changez-le immediatement.`;
+      try {
+        await sendSms(user.phone, msg);
+        sms_sent = true;
+      } catch (err) {
+        console.error('Erreur SMS reset-password:', err.message);
+      }
+    }
+
+    res.json({ ok: true, temp_password: tempPassword, sms_sent });
   } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// PATCH /api/admin/users/:id  (superadmin only)
+router.patch('/users/:id', requireSuperAdmin, async (req, res) => {
+  const { email, password, phone, notify_email, notify_sms, role, portal_username, portal_password } = req.body;
+
+  try {
+    const fields = [];
+    const params = [];
+
+    if (email) {
+      params.push(email.toLowerCase().trim());
+      fields.push(`email = $${params.length}`);
+    }
+    if (password) {
+      if (password.length < 8) return res.status(400).json({ error: 'Le mot de passe doit comporter au moins 8 caractères' });
+      const hash = await bcrypt.hash(password, 12);
+      params.push(hash);
+      fields.push(`password_hash = $${params.length}`);
+    }
+    if (phone !== undefined) {
+      params.push(phone || null);
+      fields.push(`phone = $${params.length}`);
+    }
+    if (notify_email !== undefined) {
+      params.push(!!notify_email);
+      fields.push(`notify_email = $${params.length}`);
+    }
+    if (notify_sms !== undefined) {
+      params.push(!!notify_sms);
+      fields.push(`notify_sms = $${params.length}`);
+    }
+    if (role !== undefined && ['user', 'superadmin'].includes(role)) {
+      params.push(role);
+      fields.push(`role = $${params.length}`);
+    }
+    if (portal_username !== undefined) {
+      params.push(portal_username || null);
+      fields.push(`portal_username = $${params.length}`);
+    }
+    if (portal_password) {
+      const encrypted = encrypt(portal_password);
+      params.push(encrypted);
+      fields.push(`portal_password_encrypted = $${params.length}`);
+    }
+
+    if (fields.length === 0) return res.status(400).json({ error: 'Aucune modification à effectuer' });
+
+    params.push(req.params.id);
+    const { rowCount } = await pool.query(
+      `UPDATE users SET ${fields.join(', ')} WHERE id = $${params.length}`,
+      params
+    );
+    if (rowCount === 0) return res.status(404).json({ error: 'Utilisateur introuvable' });
+    res.json({ ok: true });
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'Ce courriel est déjà utilisé' });
     console.error(err);
     res.status(500).json({ error: 'Erreur serveur' });
   }

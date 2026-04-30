@@ -140,7 +140,7 @@ function setupNav(user) {
 
   nav.querySelectorAll('.nav-logout').forEach(el => el.addEventListener('click', () => API.logout()));
 
-  if (user.role === 'superadmin') {
+  if (user.role === 'superadmin' || user.is_admin) {
     const menu = document.getElementById('navLinks');
     if (menu) {
       const a = document.createElement('a');
