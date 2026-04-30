@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configuration — Notes Esther-Blondin</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="onboarding-wrap">
+    <div class="onboarding-header">
+      <h1>Configuration du compte</h1>
+      <p>Quelques étapes pour accéder à votre tableau de bord</p>
+    </div>
+
+    <!-- Progress bar -->
+    <div class="steps-bar" id="steps-bar">
+      <div class="step-item" data-step="1">
+        <div class="step-num">1</div>
+        <div class="step-label">Portail</div>
+      </div>
+      <div class="step-item" data-step="2">
+        <div class="step-num">2</div>
+        <div class="step-label">Cours</div>
+      </div>
+      <div class="step-item" data-step="3">
+        <div class="step-num">3</div>
+        <div class="step-label">Groupes</div>
+      </div>
+      <div class="step-item" data-step="4">
+        <div class="step-num">4</div>
+        <div class="step-label">Notifications</div>
+      </div>
+      <div class="step-item" data-step="5">
+        <div class="step-num">5</div>
+        <div class="step-label">Confirmation</div>
+      </div>
+    </div>
+
+    <!-- Step 1 — Portal credentials -->
+    <div class="onboarding-panel" id="step-1">
+      <h2>Identifiants du portail</h2>
+      <p class="step-desc">Entrez vos identifiants du portail Esther-Blondin. Ils seront chiffrés et stockés de façon sécurisée.</p>
+      <div id="alert-1" class="alert alert-hidden"></div>
+      <form id="form-1">
+        <div class="form-group">
+          <label class="form-label" for="portal-user">Identifiant du portail</label>
+          <input type="text" id="portal-user" class="form-control" placeholder="Votre identifiant" required autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="portal-pass">Mot de passe du portail</label>
+          <input type="password" id="portal-pass" class="form-control" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" id="btn-1">Vérifier et importer</button>
+      </form>
+    </div>
+
+    <!-- Step 2 — Course discovery -->
+    <div class="onboarding-panel hidden" id="step-2">
+      <h2>Cours découverts</h2>
+      <p class="step-desc">Voici les cours trouvés dans votre portail. Les groupes existants sont indiqués avec le nombre de membres actuels.</p>
+      <div id="courses-discovery"></div>
+      <div class="flex-between mt-3">
+        <span class="text-sm text-muted" id="discovery-summary"></span>
+        <button class="btn btn-primary" id="btn-2">Continuer</button>
+      </div>
+    </div>
+
+    <!-- Step 3 — Group configuration -->
+    <div class="onboarding-panel hidden" id="step-3">
+      <h2>Configuration des groupes</h2>
+      <p class="step-desc">Vous êtes le premier membre de ces groupes. Vous pouvez préciser l'année scolaire et le nombre d'étudiants.</p>
+      <div id="alert-3" class="alert alert-hidden"></div>
+      <div id="new-groups-list"></div>
+      <div class="flex-between mt-3">
+        <button class="btn btn-ghost" id="btn-3-skip">Passer cette étape</button>
+        <button class="btn btn-primary" id="btn-3">Enregistrer et continuer</button>
+      </div>
+    </div>
+
+    <!-- Step 4 — Notifications -->
+    <div class="onboarding-panel hidden" id="step-4">
+      <h2>Notifications</h2>
+      <p class="step-desc">Recevez une alerte dès qu'une nouvelle note est disponible.</p>
+      <div id="alert-4" class="alert alert-hidden"></div>
+      <form id="form-4">
+        <div class="form-group">
+          <label class="form-label" for="recovery-email">Courriel de récupération <span class="text-muted">(facultatif)</span></label>
+          <input type="email" id="recovery-email" class="form-control" placeholder="courriel.personnel@exemple.com" autocomplete="email">
+          <p class="form-hint">Différent de votre courriel de connexion (ex. courriel personnel).</p>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="phone">Numéro de téléphone <span class="text-muted">(facultatif)</span></label>
+          <input type="tel" id="phone" class="form-control" placeholder="514-123-4567" autocomplete="tel">
+          <p class="form-hint">Format : XXX-XXX-XXXX</p>
+        </div>
+        <div class="form-group">
+          <div class="form-check">
+            <input type="checkbox" id="notify-email" name="notify_email">
+            <label for="notify-email">Activer les notifications par courriel</label>
+          </div>
+          <div class="form-check">
+            <input type="checkbox" id="notify-sms" name="notify_sms">
+            <label for="notify-sms">Activer les notifications par SMS</label>
+          </div>
+        </div>
+        <div class="flex-between mt-2">
+          <button type="button" class="btn btn-ghost" id="btn-4-skip">Passer cette étape</button>
+          <button type="submit" class="btn btn-primary" id="btn-4">Enregistrer et continuer</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Step 5 — Confirmation -->
+    <div class="onboarding-panel hidden" id="step-5">
+      <h2>Tout est prêt !</h2>
+      <p class="step-desc">Votre compte est configuré.</p>
+      <div id="summary-list" style="margin: 1.25rem 0;"></div>
+      <button class="btn btn-primary btn-block" id="btn-5">Accéder au tableau de bord</button>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/onboarding.js"></script>
+</body>
+</html>

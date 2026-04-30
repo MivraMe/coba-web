@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tableau de bord — Notes Esther-Blondin</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="nav" id="main-nav">
+    <a class="nav-brand" href="/dashboard">Notes EB</a>
+    <div class="nav-links">
+      <a href="/dashboard" class="nav-link">Tableau de bord</a>
+      <a href="/groupes" class="nav-link">Groupes</a>
+      <a href="/compte" class="nav-link">Mon compte</a>
+    </div>
+    <div class="nav-right">
+      <span class="nav-email"></span>
+      <button class="nav-logout">Déconnexion</button>
+    </div>
+  </nav>
+
+  <div class="page">
+    <div class="container">
+      <!-- Header -->
+      <div class="flex-between mb-2">
+        <h1 style="font-size:1.4rem;font-weight:700">Tableau de bord</h1>
+        <button class="btn btn-ghost btn-sm" id="sync-btn">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/>
+          </svg>
+          Synchroniser
+        </button>
+      </div>
+      <div id="sync-alert" class="alert alert-hidden"></div>
+
+      <!-- Year filter -->
+      <div class="year-filter" id="year-filter">
+        <div class="loading-overlay"><span class="spinner spinner-dark"></span></div>
+      </div>
+
+      <!-- Courses grid -->
+      <div class="courses-grid" id="courses-grid">
+        <div class="loading-overlay"><span class="spinner spinner-dark"></span></div>
+      </div>
+
+      <!-- Detail panel -->
+      <div class="detail-panel hidden" id="detail-panel">
+        <div class="detail-header">
+          <div>
+            <div class="course-code" id="detail-code"></div>
+            <div class="detail-title" id="detail-name"></div>
+          </div>
+          <button class="btn btn-ghost btn-sm" id="detail-close">✕ Fermer</button>
+        </div>
+
+        <div class="stats-grid" id="detail-stats"></div>
+
+        <div class="chart-container">
+          <canvas id="grade-chart"></canvas>
+        </div>
+
+        <h3 style="font-size:.95rem;font-weight:600;margin-bottom:.75rem">Détail des évaluations</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Évaluation</th>
+                <th>Catégorie</th>
+                <th>Pondération</th>
+                <th>Date</th>
+                <th>Ma note</th>
+                <th>Moy. groupe</th>
+              </tr>
+            </thead>
+            <tbody id="assignments-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/dashboard.js"></script>
+</body>
+</html>

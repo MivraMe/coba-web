@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mon compte — Notes Esther-Blondin</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="nav" id="main-nav">
+    <a class="nav-brand" href="/dashboard">Notes EB</a>
+    <div class="nav-links">
+      <a href="/dashboard" class="nav-link">Tableau de bord</a>
+      <a href="/groupes" class="nav-link">Groupes</a>
+      <a href="/compte" class="nav-link">Mon compte</a>
+    </div>
+    <div class="nav-right">
+      <span class="nav-email"></span>
+      <button class="nav-logout">Déconnexion</button>
+    </div>
+  </nav>
+
+  <div class="page">
+    <div class="container-sm">
+      <h1 style="font-size:1.4rem;font-weight:700;margin-bottom:1.5rem">Mon compte</h1>
+
+      <!-- Profile -->
+      <div class="account-section">
+        <div class="account-section-title">
+          <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>
+          Profil
+        </div>
+        <div id="alert-profil" class="alert alert-hidden"></div>
+        <form id="form-profil" class="card">
+          <div class="form-group">
+            <label class="form-label" for="email">Courriel de connexion</label>
+            <input type="email" id="email" class="form-control" autocomplete="email">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="recovery-email">Courriel de récupération</label>
+            <input type="email" id="recovery-email" class="form-control" placeholder="courriel.personnel@exemple.com" autocomplete="email">
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm" id="btn-profil">Enregistrer</button>
+        </form>
+      </div>
+
+      <!-- Password -->
+      <div class="account-section">
+        <div class="account-section-title">
+          <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
+          Mot de passe
+        </div>
+        <div id="alert-mdp" class="alert alert-hidden"></div>
+        <form id="form-mdp" class="card">
+          <div class="form-group">
+            <label class="form-label" for="current-pass">Mot de passe actuel</label>
+            <input type="password" id="current-pass" class="form-control" autocomplete="current-password" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="new-pass">Nouveau mot de passe</label>
+            <input type="password" id="new-pass" class="form-control" autocomplete="new-password" minlength="8" required placeholder="8 caractères minimum">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="confirm-pass">Confirmer le nouveau mot de passe</label>
+            <input type="password" id="confirm-pass" class="form-control" autocomplete="new-password" required>
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm" id="btn-mdp">Modifier le mot de passe</button>
+        </form>
+      </div>
+
+      <!-- Portal credentials -->
+      <div class="account-section">
+        <div class="account-section-title">
+          <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"/></svg>
+          Portail Esther-Blondin
+        </div>
+        <div id="alert-portail" class="alert alert-hidden"></div>
+        <form id="form-portail" class="card">
+          <div class="form-group">
+            <label class="form-label" for="portal-user">Identifiant du portail</label>
+            <input type="text" id="portal-user" class="form-control" autocomplete="username" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="portal-pass">Mot de passe du portail</label>
+            <input type="password" id="portal-pass" class="form-control" autocomplete="current-password" required placeholder="Nouveau mot de passe">
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm" id="btn-portail">Mettre à jour</button>
+        </form>
+      </div>
+
+      <!-- Notifications -->
+      <div class="account-section">
+        <div class="account-section-title">
+          <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"/></svg>
+          Notifications
+        </div>
+        <div id="alert-notif" class="alert alert-hidden"></div>
+        <form id="form-notif" class="card">
+          <div class="form-group">
+            <label class="form-label" for="phone">Numéro de téléphone</label>
+            <input type="tel" id="phone" class="form-control" placeholder="514-123-4567" autocomplete="tel">
+          </div>
+          <div class="form-group">
+            <div class="form-check">
+              <input type="checkbox" id="notify-email" name="notify_email">
+              <label for="notify-email">Notifications par courriel</label>
+            </div>
+            <div class="form-check">
+              <input type="checkbox" id="notify-sms" name="notify_sms">
+              <label for="notify-sms">Notifications par SMS</label>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm" id="btn-notif">Enregistrer</button>
+        </form>
+      </div>
+
+      <!-- 2FA -->
+      <div class="account-section section-disabled">
+        <div class="account-section-title">
+          <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg>
+          Double authentification (2FA)
+          <span class="badge badge-neutral">Bientôt disponible</span>
+        </div>
+        <div class="card">
+          <p class="text-muted text-sm">La double authentification par TOTP sera disponible dans une prochaine mise à jour.</p>
+        </div>
+      </div>
+
+      <!-- Danger zone -->
+      <div class="account-section">
+        <div class="account-section-title" style="color:var(--danger)">
+          <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+          Zone dangereuse
+        </div>
+        <div class="card" style="border:1.5px solid var(--danger-l)">
+          <p class="text-sm mb-2" style="color:var(--text-2)">La suppression de votre compte est irréversible. Toutes vos données seront effacées.</p>
+          <div id="alert-delete" class="alert alert-hidden"></div>
+          <form id="form-delete">
+            <div class="form-group">
+              <label class="form-label" for="delete-pass">Confirmer avec votre mot de passe</label>
+              <input type="password" id="delete-pass" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-danger btn-sm" id="btn-delete">Supprimer mon compte</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/account.js"></script>
+</body>
+</html>

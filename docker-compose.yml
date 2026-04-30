@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-cobadb}
+      POSTGRES_USER: ${DB_USER:-cobauser}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-cobauser} -d ${DB_NAME:-cobadb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: ./backend
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-cobauser}:${DB_PASSWORD}@db:5432/${DB_NAME:-cobadb}
+      JWT_SECRET: ${JWT_SECRET}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      VOIPMS_USERNAME: ${VOIPMS_USERNAME:-}
+      VOIPMS_PASSWORD: ${VOIPMS_PASSWORD:-}
+      VOIPMS_DID: ${VOIPMS_DID:-}
+      PORTAL_BASE_URL: ${PORTAL_BASE_URL}
+      NODE_ENV: ${NODE_ENV:-production}
+      REFRESH_INTERVAL_MINUTES: ${REFRESH_INTERVAL_MINUTES:-5}
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

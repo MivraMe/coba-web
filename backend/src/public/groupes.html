@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Groupes — Notes Esther-Blondin</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="nav" id="main-nav">
+    <a class="nav-brand" href="/dashboard">Notes EB</a>
+    <div class="nav-links">
+      <a href="/dashboard" class="nav-link">Tableau de bord</a>
+      <a href="/groupes" class="nav-link">Groupes</a>
+      <a href="/compte" class="nav-link">Mon compte</a>
+    </div>
+    <div class="nav-right">
+      <span class="nav-email"></span>
+      <button class="nav-logout">Déconnexion</button>
+    </div>
+  </nav>
+
+  <div class="page">
+    <div class="container">
+      <div class="flex-between mb-2" style="margin-bottom:1.25rem">
+        <h1 style="font-size:1.4rem;font-weight:700">Mes groupes</h1>
+      </div>
+
+      <div id="groups-wrap">
+        <div class="loading-overlay"><span class="spinner spinner-dark"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/groups.js"></script>
+</body>
+</html>
