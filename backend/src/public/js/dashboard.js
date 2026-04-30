@@ -363,10 +363,20 @@ function renderChart(data) {
   if (gradeChart) { gradeChart.destroy(); gradeChart = null; }
 
   const pts = data.points;
+  let noDataMsg = canvas.parentElement.querySelector('.chart-no-data');
   if (pts.length === 0) {
-    canvas.parentElement.innerHTML = '<p class="text-muted text-sm text-center" style="padding:2rem">Aucune donnée à afficher.</p>';
+    canvas.style.display = 'none';
+    if (!noDataMsg) {
+      noDataMsg = document.createElement('p');
+      noDataMsg.className = 'chart-no-data text-muted text-sm text-center';
+      noDataMsg.style.padding = '2rem';
+      noDataMsg.textContent = 'Aucune donnée à afficher.';
+      canvas.parentElement.appendChild(noDataMsg);
+    }
     return;
   }
+  if (noDataMsg) noDataMsg.remove();
+  canvas.style.display = '';
 
   const isMoyenne = chartMode === 'moyenne';
 
