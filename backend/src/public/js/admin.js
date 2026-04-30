@@ -3,7 +3,7 @@ const ALL_TABS = ['monitoring', 'users', 'tests', 'config', 'deploy'];
 document.addEventListener('DOMContentLoaded', async () => {
   const user = await API.requireAuth();
   if (!user) return;
-  if (!user.is_admin) {
+  if (user.role !== 'superadmin') {
     window.location.href = '/dashboard';
     return;
   }

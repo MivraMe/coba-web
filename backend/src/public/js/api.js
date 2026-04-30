@@ -65,7 +65,8 @@ const API = (() => {
         const res = await request('GET', '/auth/me');
         if (res && res.ok) {
           const user = await res.json();
-          if (user.onboarding_completed) window.location.href = '/dashboard';
+          if (user.role === 'superadmin') window.location.href = '/admin';
+          else if (user.onboarding_completed) window.location.href = '/dashboard';
           else window.location.href = '/onboarding';
           return;
         }
@@ -135,7 +136,7 @@ function setupNav(user) {
 
   nav.querySelectorAll('.nav-logout').forEach(el => el.addEventListener('click', () => API.logout()));
 
-  if (user.is_admin) {
+  if (user.role === 'superadmin') {
     const menu = document.getElementById('navLinks');
     if (menu) {
       const a = document.createElement('a');

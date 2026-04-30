@@ -105,3 +105,6 @@ CREATE TABLE IF NOT EXISTS notification_log (
 CREATE INDEX IF NOT EXISTS idx_sync_log_group ON sync_log(group_id);
 CREATE INDEX IF NOT EXISTS idx_sync_log_started ON sync_log(started_at);
 CREATE INDEX IF NOT EXISTS idx_notif_log_sent ON notification_log(type, sent_at);
+
+-- Superadmin role (idempotent migration)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'user';
