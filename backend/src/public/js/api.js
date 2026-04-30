@@ -22,7 +22,9 @@ const API = (() => {
     const opts = { method, headers };
     if (body !== undefined) opts.body = JSON.stringify(body);
     const res = await fetch(`/api${path}`, opts);
-    if (res.status === 401) { logout(); return null; }
+    // Only redirect on 401 if we had an active session (token present).
+    // Without a token we're on the login page — let the caller show the error.
+    if (res.status === 401 && getToken()) { logout(); return null; }
     return res;
   }
 

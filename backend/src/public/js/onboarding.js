@@ -89,7 +89,7 @@ function renderDiscovery(courses, totalAssignments) {
     for (const c of list) {
       const badge = c.is_new
         ? `<span class="badge badge-primary">Nouveau groupe</span>`
-        : `<span class="badge badge-neutral">${c.member_count} membre(s)</span>`;
+        : `<span class="badge badge-neutral">${fr(c.member_count, 'membre', 'membres')}</span>`;
       html += `<li class="course-item">
         <div>
           <div class="course-info">${c.course_code} — ${c.course_name}</div>
@@ -172,6 +172,8 @@ async function skipStep(step) {
   else { renderSummary(); goToStep(5); }
 }
 
+function fr(n, singular, plural) { return `${n} ${n === 1 ? singular : plural}`; }
+
 function renderSummary() {
   const total = discoveredCourses.length;
   const existing = discoveredCourses.filter(c => !c.is_new).length;
@@ -180,9 +182,9 @@ function renderSummary() {
   const notifSms = document.getElementById('notify-sms')?.checked;
 
   const items = [
-    { icon: '📚', text: `${total} cours importé(s)` },
-    { icon: '👥', text: `${existing} groupe(s) rejoint(s)` },
-    { icon: '✨', text: `${created} nouveau(x) groupe(s) créé(s)` },
+    { icon: '📚', text: fr(total, 'cours importé', 'cours importés') },
+    { icon: '👥', text: fr(existing, 'groupe rejoint', 'groupes rejoints') },
+    { icon: '✨', text: fr(created, 'nouveau groupe créé', 'nouveaux groupes créés') },
     { icon: '📧', text: notifEmail ? 'Notifications courriel activées' : 'Notifications courriel désactivées' },
     { icon: '💬', text: notifSms ? 'Notifications SMS activées' : 'Notifications SMS désactivées' },
   ];

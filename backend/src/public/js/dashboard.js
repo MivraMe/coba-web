@@ -2,8 +2,11 @@ let selectedGroupId = null;
 let currentYear = null;
 let gradeChart = null;
 let globalChart = null;
+let globalLineChart = null;
+let sparklineChart = null;
 let chartMode = 'moyenne'; // 'moyenne' | 'mediane'
 let currentChartData = null;
+let coursesData = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   const user = await API.requireOnboarded();
@@ -115,19 +118,19 @@ async function loadGlobalChart() {
         {
           label: 'Ma moyenne',
           data: courses.map(c => c.personal_avg !== null ? parseFloat(c.personal_avg) : null),
-          backgroundColor: 'rgba(30,64,175,.75)',
+          backgroundColor: 'rgba(147,197,253,0.9)',
           borderRadius: 4,
         },
         {
           label: 'Moy. groupe',
           data: courses.map(c => c.group_avg !== null ? parseFloat(c.group_avg) : null),
-          backgroundColor: 'rgba(5,150,105,.6)',
+          backgroundColor: 'rgba(110,231,183,0.9)',
           borderRadius: 4,
         },
         {
           label: 'Méd. groupe',
           data: courses.map(c => c.group_median !== null ? parseFloat(c.group_median) : null),
-          backgroundColor: 'rgba(217,119,6,.6)',
+          backgroundColor: 'rgba(253,224,71,0.9)',
           borderRadius: 4,
         },
       ],
@@ -135,10 +138,119 @@ async function loadGlobalChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { position: 'top' } },
+      plugins: {
+        legend: { position: 'top', labels: { color: 'rgba(255,255,255,.85)' } },
+      },
       scales: {
-        y: { min: 0, max: 100, ticks: { callback: v => v + '%' }, grid: { color: 'rgba(255,255,255,.15)' } },
-        x: { grid: { display: false } },
+        y: {
+          min: 0, max: 100,
+          ticks: { callback: v => v + '%', color: 'rgba(255,255,255,.7)' },
+          grid: { color: 'rgba(255,255,255,.15)' },
+        },
+        x: {
+          ticks: { color: 'rgba(255,255,255,.7)' },
+          grid: { display: false },
+        },
+      },
+    },
+  });
+
+  await loadGlobalLineChart(courses);
+}
+
+async function loadGlobalLineChart(courses) {
+  const canvas = document.getElementById('global-line-chart');
+  if (globalLineChart) { globalLineChart.destroy(); globalLineChart = null; }
+
+  const palette = [
+    'rgba(147,197,253,0.9)', 'rgba(110,231,183,0.9)', 'rgba(253,224,71,0.9)',
+    'rgba(249,168,212,0.9)', 'rgba(196,181,253,0.9)', 'rgba(253,186,116,0.9)',
+  ];
+
+  const graphiques = await Promise.all(
+    courses.map(c => API.get(`/dashboard/cours/${c.group_id}/graphique`))
+  );
+
+  const datasets = [];
+  for (let i = 0; i < courses.length; i++) {
+    const g = graphiques[i];
+    if (!g || !g.points || g.points.length === 0) continue;
+    const color = palette[i % palette.length];
+    datasets.push({
+      label: courses[i].course_code,
+      data: g.points.map(p => ({ x: p.cumulative_weight_pct, y: p.personal_running_avg })),
+      borderColor: color,
+      backgroundColor: 'transparent',
+      tension: .35,
+      pointRadius: 3,
+      pointHoverRadius: 5,
+      borderWidth: 2,
+      spanGaps: true,
+    });
+  }
+
+  if (datasets.length === 0) return;
+
+  globalLineChart = new Chart(canvas, {
+    type: 'line',
+    data: { datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top', labels: { color: 'rgba(255,255,255,.85)', boxWidth: 12 } },
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y !== null ? ctx.parsed.y.toFixed(1) + '%' : '—'}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          type: 'linear', min: 0, max: 100,
+          title: { display: true, text: '% de la note finale', color: 'rgba(255,255,255,.6)' },
+          ticks: { callback: v => v + '%', color: 'rgba(255,255,255,.7)' },
+          grid: { color: 'rgba(255,255,255,.1)' },
+        },
+        y: {
+          min: 0, max: 100,
+          ticks: { callback: v => v + '%', color: 'rgba(255,255,255,.7)' },
+          grid: { color: 'rgba(255,255,255,.1)' },
+        },
+      },
+    },
+  });
+}
+
+function renderSparkline() {
+  const canvas = document.getElementById('sparkline');
+  if (!canvas) return;
+  if (sparklineChart) { sparklineChart.destroy(); sparklineChart = null; }
+  if (!coursesData || coursesData.length === 0) return;
+
+  const vals = coursesData.map(c => c.personal_avg ? parseFloat(c.personal_avg) : null);
+  sparklineChart = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: coursesData.map(c => c.course_code),
+      datasets: [{
+        data: vals,
+        borderColor: 'rgba(147,197,253,0.8)',
+        backgroundColor: 'rgba(147,197,253,0.15)',
+        borderWidth: 1.5,
+        pointRadius: 2,
+        fill: true,
+        tension: .4,
+        spanGaps: true,
+      }],
+    },
+    options: {
+      responsive: false,
+      animation: false,
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      scales: {
+        x: { display: false },
+        y: { display: false, min: 0, max: 100 },
       },
     },
   });
@@ -155,8 +267,13 @@ async function loadCourses() {
 
   if (!courses || courses.length === 0) {
     grid.innerHTML = '<div class="empty-state"><p>Aucun cours trouvé pour cette période.</p></div>';
+    coursesData = null;
+    renderSparkline();
     return;
   }
+
+  coursesData = courses;
+  renderSparkline();
 
   grid.innerHTML = courses.map(c => {
     const pAvg = c.personal_avg ? `${parseFloat(c.personal_avg).toFixed(1)}%` : '—';
@@ -293,15 +410,13 @@ function renderChart(data) {
   }
 
   const isMoyenne = chartMode === 'moyenne';
-  const maxX = pts.length > 0 ? pts[pts.length - 1].cumulative_weight_pct : 100;
 
-  const personalData = pts.map(p => isMoyenne ? p.personal_running_avg : p.personal_pct);
-  const groupData    = pts.map(p => isMoyenne ? p.group_running_avg    : p.group_median_pct);
+  const personalData = pts.map(p => ({ x: p.cumulative_weight_pct, y: isMoyenne ? p.personal_running_avg : p.personal_pct }));
+  const groupData    = pts.map(p => ({ x: p.cumulative_weight_pct, y: isMoyenne ? p.group_running_avg    : p.group_median_pct }));
 
   gradeChart = new Chart(canvas, {
     type: 'line',
     data: {
-      labels: pts.map(p => `${p.cumulative_weight_pct}%`),
       datasets: [
         {
           label: isMoyenne ? 'Ma moyenne (cumul.)' : 'Ma note',
@@ -345,7 +460,9 @@ function renderChart(data) {
       },
       scales: {
         x: {
-          title: { display: true, text: `% de la note finale saisie (sur ${maxX}%)` },
+          type: 'linear', min: 0, max: 100,
+          title: { display: true, text: '% de la note finale' },
+          ticks: { callback: v => v + '%' },
           grid: { color: '#f1f5f9' },
         },
         y: {

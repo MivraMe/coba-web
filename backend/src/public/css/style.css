@@ -197,6 +197,8 @@ a:hover { text-decoration: underline; }
   padding: .15rem .5rem;
   border-radius: 999px;
   font-size: .75rem; font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .badge-primary { background: var(--primary-l); color: var(--primary); }
 .badge-success { background: var(--success-l); color: var(--success); }
