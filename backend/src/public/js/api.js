@@ -163,3 +163,14 @@ function setupNav(user) {
     navLinks.addEventListener('click', () => navLinks.classList.remove('open'));
   }
 }
+
+// Burger menu — initialized immediately on DOM ready, independent of auth
+document.addEventListener('DOMContentLoaded', () => {
+  const burgerBtn = document.getElementById('burgerBtn');
+  if (!burgerBtn) return;
+  const navLinks = document.querySelector('#main-nav .nav-links');
+  burgerBtn.addEventListener('click', () => navLinks.classList.toggle('open'));
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#main-nav')) navLinks.classList.remove('open');
+  });
+});
