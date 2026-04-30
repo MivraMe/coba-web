@@ -226,27 +226,73 @@
           <div class="todo-grid">
             <div class="todo-card">
               <div class="todo-card-title">Comparaison entre sessions scolaires</div>
-              <div class="todo-card-desc">Comparer les résultats entre deux sessions (ex. 2024-2025 vs 2025-2026) pour visualiser la progression.</div>
+              <span class="badge badge-neutral">Planifié</span>
+              <div class="todo-card-desc">Statistiques côte à côte pour deux années scolaires (ex. 2024-2025 vs 2025-2026) afin de visualiser la progression.</div>
             </div>
             <div class="todo-card">
               <div class="todo-card-title">Profil utilisateur étendu</div>
-              <div class="todo-card-desc">Afficher le prénom, nom et code permanent de l'utilisateur. Sera obtenu via une route API dédiée du portail collégial — aucune saisie manuelle.</div>
+              <span class="badge badge-neutral">Planifié</span>
+              <div class="todo-card-desc">Prénom, nom et code permanent obtenus via une route API dédiée du portail collégial — aucune saisie manuelle.</div>
             </div>
             <div class="todo-card">
               <div class="todo-card-title">Chat entre membres d'un groupe</div>
+              <span class="badge badge-neutral">Planifié</span>
               <div class="todo-card-desc">Messagerie simple permettant aux membres d'un même groupe de communiquer directement dans l'application.</div>
             </div>
             <div class="todo-card">
               <div class="todo-card-title">Invitations à rejoindre l'application</div>
-              <div class="todo-card-desc">Permettre aux utilisateurs d'inviter leurs collègues de groupe à créer un compte NotesQC via un lien ou un courriel.</div>
+              <span class="badge badge-neutral">Planifié</span>
+              <div class="todo-card-desc">Inviter des étudiants à créer un compte NotesQC via un lien ou un courriel personnalisé.</div>
             </div>
             <div class="todo-card">
               <div class="todo-card-title">Double authentification (2FA)</div>
+              <span class="badge badge-neutral">Planifié</span>
               <div class="todo-card-desc">Renforcement de la sécurité via une authentification à deux facteurs TOTP (ex. Google Authenticator).</div>
             </div>
             <div class="todo-card">
               <div class="todo-card-title">Push notifications mobiles</div>
+              <span class="badge badge-neutral">Planifié</span>
               <div class="todo-card-desc">Notifications push natives via une future application mobile NotesQC disponible sur iOS et Android.</div>
+            </div>
+            <div class="todo-card">
+              <div class="todo-card-title">Masquer des cours</div>
+              <span class="badge badge-neutral">Planifié</span>
+              <div class="todo-card-desc">Masquer certains cours du dashboard. Les cours masqués sont enregistrés en BD et restent accessibles via un filtre dédié.</div>
+            </div>
+            <div class="todo-card">
+              <div class="todo-card-title">Historique des changements de notes</div>
+              <span class="badge badge-neutral">Planifié</span>
+              <div class="todo-card-desc">Conserver l'ancienne valeur dans un historique si une note est modifiée lors d'une synchronisation. Afficher un badge "Modifié" dans le détail.</div>
+            </div>
+            <div class="todo-card">
+              <div class="todo-card-title">Simulateur de note</div>
+              <span class="badge badge-neutral">Planifié</span>
+              <div class="todo-card-desc">Entrer des notes hypothétiques pour les évaluations sans résultat et voir en temps réel l'impact sur la moyenne finale du cours.</div>
+            </div>
+            <div class="todo-card">
+              <div class="todo-card-title">Objectif de note par cours</div>
+              <span class="badge badge-neutral">Planifié</span>
+              <div class="todo-card-desc">Définir une cible en % pour chaque cours. Afficher une barre de progression et indiquer si l'objectif est encore atteignable.</div>
+            </div>
+            <div class="todo-card">
+              <div class="todo-card-title">Tableau de progression</div>
+              <span class="badge badge-neutral">Planifié</span>
+              <div class="todo-card-desc">Graphique en ligne sur le dashboard montrant l'évolution de la moyenne générale dans le temps, basé sur un snapshot à chaque synchro.</div>
+            </div>
+            <div class="todo-card">
+              <div class="todo-card-title">Meilleure note du groupe</div>
+              <span class="badge badge-neutral">Planifié</span>
+              <div class="todo-card-desc">Afficher anonymement la meilleure note obtenue pour chaque évaluation dans le détail d'un groupe (pas de nom, juste la valeur).</div>
+            </div>
+            <div class="todo-card">
+              <div class="todo-card-title">Classement optionnel dans un groupe</div>
+              <span class="badge badge-neutral">Planifié</span>
+              <div class="todo-card-desc">Option opt-in dans Mon compte pour apparaître dans un classement par moyenne au sein du groupe, visible uniquement par ses membres.</div>
+            </div>
+            <div class="todo-card">
+              <div class="todo-card-title">Backup automatique</div>
+              <span class="badge badge-neutral">Planifié</span>
+              <div class="todo-card-desc">Sauvegarde automatique de la base de données chaque nuit vers un NAS ou un stockage distant sécurisé.</div>
             </div>
           </div>
         </div>

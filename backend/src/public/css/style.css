@@ -180,6 +180,7 @@ a:hover { text-decoration: underline; }
 .btn-primary:hover { background: var(--primary-h); text-decoration: none; color: #fff; }
 .btn-secondary { background: var(--border); color: var(--text); }
 .btn-secondary:hover { background: #cbd5e1; text-decoration: none; }
+html.dark .btn-secondary:hover { background: #475569; }
 .btn-danger { background: var(--danger); color: #fff; }
 .btn-danger:hover { background: #b91c1c; text-decoration: none; color: #fff; }
 .btn-ghost { background: transparent; color: var(--accent); border: 1.5px solid var(--border); }
@@ -200,6 +201,10 @@ a:hover { text-decoration: underline; }
 .alert-success { background: var(--success-l); color: #065f46; border: 1px solid #6ee7b7; }
 .alert-info { background: var(--primary-l); color: #1e40af; border: 1px solid #93c5fd; }
 .alert-warning { background: var(--warning-l); color: #92400e; border: 1px solid #fcd34d; }
+html.dark .alert-error   { color: #fca5a5; border-color: #7f1d1d; }
+html.dark .alert-success { color: #6ee7b7; border-color: #065f46; }
+html.dark .alert-info    { color: #93c5fd; border-color: #1e3a5f; }
+html.dark .alert-warning { color: #fcd34d; border-color: #78350f; }
 .alert-hidden { display: none; }
 
 /* ── BADGES ── */
