@@ -189,6 +189,7 @@ router.get('/users', async (req, res) => {
     const { rows: users } = await pool.query(`
       SELECT u.id, u.email, u.created_at, u.is_admin, u.role,
              u.notify_email, u.notify_sms, u.phone, u.portal_username,
+             (SELECT email FROM users WHERE id = u.invited_by_user_id) AS invited_by_email,
              MAX(gm.refreshed_at) AS last_synced
       FROM users u
       LEFT JOIN group_members gm ON gm.user_id = u.id

@@ -109,6 +109,30 @@ CREATE INDEX IF NOT EXISTS idx_notif_log_sent ON notification_log(type, sent_at)
 -- Superadmin role (idempotent migration)
 ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'user';
 
+-- Invitations applicatives (idempotent migration)
+CREATE TABLE IF NOT EXISTS user_invitations (
+  id SERIAL PRIMARY KEY,
+  inviter_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  email VARCHAR(255),
+  token VARCHAR(255) UNIQUE NOT NULL,
+  expires_at TIMESTAMPTZ,
+  used_at TIMESTAMPTZ,
+  use_count INTEGER NOT NULL DEFAULT 0,
+  max_uses INTEGER,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_user_invitations_token ON user_invitations(token);
+CREATE INDEX IF NOT EXISTS idx_user_invitations_inviter ON user_invitations(inviter_id);
+
+-- Traçabilité des invitations sur les comptes utilisateurs
+ALTER TABLE users ADD COLUMN IF NOT EXISTS invited_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
+
+-- Migrations idempotentes pour user_invitations
+ALTER TABLE user_invitations ALTER COLUMN email DROP NOT NULL;
+ALTER TABLE user_invitations ALTER COLUMN expires_at DROP NOT NULL;
+ALTER TABLE user_invitations ADD COLUMN IF NOT EXISTS use_count INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE user_invitations ADD COLUMN IF NOT EXISTS max_uses INTEGER;
+
 -- TODO items
 CREATE TABLE IF NOT EXISTS todo_items (
   id SERIAL PRIMARY KEY,

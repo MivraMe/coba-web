@@ -280,7 +280,10 @@ function renderUsersTable(users) {
     }
 
     return `<tr>
-      <td style="font-size:.85rem">${escapeHtml(u.email)}</td>
+      <td style="font-size:.85rem">
+        ${escapeHtml(u.email)}
+        ${u.invited_by_email ? `<span style="display:block;color:var(--text-3);font-size:.72rem;margin-top:.15rem">Invité par ${escapeHtml(u.invited_by_email)}</span>` : ''}
+      </td>
       <td style="font-size:.8rem;white-space:nowrap">${created}</td>
       <td style="font-size:.8rem">${synced}</td>
       <td style="font-size:.8rem">${groups}</td>

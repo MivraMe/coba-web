@@ -13,7 +13,7 @@ function signToken(userId, email, isAdmin = false, role = 'user') {
 
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, invitation_token } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Courriel et mot de passe requis' });
   if (password.length < 8) return res.status(400).json({ error: 'Le mot de passe doit comporter au moins 8 caractères' });
 
@@ -25,6 +25,40 @@ router.post('/register', async (req, res) => {
       [normalizedEmail, hash]
     );
     const user = rows[0];
+
+    if (invitation_token) {
+      const { rows: invRows } = await pool.query(
+        'SELECT id, email, inviter_id FROM user_invitations WHERE token = $1',
+        [invitation_token]
+      ).catch(() => ({ rows: [] }));
+      const inv = invRows[0];
+      if (inv) {
+        if (inv.email !== null) {
+          // Invitation ciblée : marquer comme utilisée
+          await pool.query(
+            `UPDATE user_invitations SET used_at = NOW()
+             WHERE id = $1 AND used_at IS NULL AND email = $2
+             AND (expires_at IS NULL OR expires_at > NOW())`,
+            [inv.id, normalizedEmail]
+          ).catch(() => {});
+        } else {
+          // Lien de partage : incrémenter le compteur
+          await pool.query(
+            `UPDATE user_invitations SET use_count = use_count + 1
+             WHERE id = $1
+             AND (expires_at IS NULL OR expires_at > NOW())
+             AND (max_uses IS NULL OR use_count < max_uses)`,
+            [inv.id]
+          ).catch(() => {});
+        }
+        // Enregistrer l'inviteur sur le nouveau compte
+        await pool.query(
+          'UPDATE users SET invited_by_user_id = $1 WHERE id = $2',
+          [inv.inviter_id, user.id]
+        ).catch(() => {});
+      }
+    }
+
     res.status(201).json({ token: signToken(user.id, user.email, user.is_admin, user.role), user });
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'Ce courriel est déjà utilisé' });

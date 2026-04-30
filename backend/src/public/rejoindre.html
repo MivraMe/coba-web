@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invitation — NotesQC</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script>(function(){var t=localStorage.getItem('coba_theme');if(t==='dark')document.documentElement.classList.add('dark');})()</script>
+</head>
+<body>
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <img src="/logo/notesQc_black.png" alt="NotesQC" class="auth-logo-img">
+      </div>
+
+      <div id="state-loading" style="text-align:center;padding:1.5rem 0">
+        <span class="spinner" style="width:24px;height:24px;border-width:3px"></span>
+        <p class="text-muted text-sm" style="margin-top:.75rem">Vérification de l'invitation…</p>
+      </div>
+
+      <div id="state-valid" style="display:none">
+        <div style="text-align:center;margin-bottom:1.5rem">
+          <div style="display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;background:var(--primary-l);border-radius:50%;margin-bottom:1rem">
+            <svg width="28" height="28" fill="none" stroke="var(--primary)" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+          </div>
+          <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:.4rem">Tu as été invité(e) !</h2>
+          <p class="text-muted text-sm" id="invite-msg"></p>
+          <p class="text-muted text-sm" id="invite-expiry" style="margin-top:.25rem"></p>
+        </div>
+        <a id="btn-create" href="/register" class="btn btn-primary btn-block">Créer mon compte</a>
+        <p class="text-center mt-2 text-sm text-muted">Déjà un compte ? <a href="/">Se connecter</a></p>
+      </div>
+
+      <div id="state-error" style="display:none;text-align:center;padding:1rem 0">
+        <div style="display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;background:#fee2e2;border-radius:50%;margin-bottom:1rem">
+          <svg width="28" height="28" fill="none" stroke="#dc2626" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+        </div>
+        <p id="error-msg" style="font-weight:500;color:var(--danger)"></p>
+        <p class="text-muted text-sm" style="margin-top:.5rem">Demande un nouveau lien à la personne qui t'a invité(e).</p>
+        <a href="/" class="btn btn-secondary btn-sm" style="margin-top:1.25rem;display:inline-block">Aller à la page de connexion</a>
+      </div>
+
+      <div id="state-logged-in" style="display:none;text-align:center;padding:1rem 0">
+        <p style="font-weight:500">Tu as déjà un compte NotesQC.</p>
+        <a href="/dashboard" class="btn btn-primary btn-sm" style="margin-top:1rem;display:inline-block">Aller au tableau de bord</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/theme.js"></script>
+  <script>
+    (async () => {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get('token');
+
+      const stateLoading = document.getElementById('state-loading');
+      const stateValid = document.getElementById('state-valid');
+      const stateError = document.getElementById('state-error');
+      const stateLoggedIn = document.getElementById('state-logged-in');
+
+      function show(el) {
+        stateLoading.style.display = 'none';
+        el.style.display = '';
+      }
+
+      // Check if already logged in
+      const existingToken = API.getToken();
+      if (existingToken) {
+        try {
+          const meRes = await API.request('GET', '/auth/me');
+          if (meRes && meRes.ok) { show(stateLoggedIn); return; }
+        } catch {}
+        API.clearToken();
+        API.clearUser();
+      }
+
+      if (!token) {
+        document.getElementById('error-msg').textContent = 'Lien d\'invitation invalide.';
+        show(stateError);
+        return;
+      }
+
+      const res = await fetch(`/api/invitations/check/${token}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        document.getElementById('error-msg').textContent = data.error || 'Invitation invalide.';
+        show(stateError);
+        return;
+      }
+
+      document.getElementById('invite-msg').textContent =
+        `${data.inviter_email} t'invite à rejoindre NotesQC pour suivre tes notes de cours.`;
+
+      if (data.expires_at) {
+        const expiry = new Date(data.expires_at).toLocaleDateString('fr-CA', {
+          year: 'numeric', month: 'long', day: 'numeric',
+        });
+        document.getElementById('invite-expiry').textContent = `Ce lien expire le ${expiry}.`;
+      }
+
+      // Pour un lien de partage (type=link), pas de pré-remplissage d'email
+      // Pour une invitation ciblée (type=email), pré-remplir email et token
+      let registerUrl = `/register?token=${encodeURIComponent(token)}`;
+      if (data.type === 'email' && data.email) {
+        registerUrl += `&email=${encodeURIComponent(data.email)}`;
+      }
+      document.getElementById('btn-create').href = registerUrl;
+
+      show(stateValid);
+    })();
+  </script>
+</body>
+</html>
