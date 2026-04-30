@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Groupes — NotesQC</title>
   <link rel="stylesheet" href="/css/style.css">
+  <script>(function(){var t=localStorage.getItem('coba_theme');if(t==='dark')document.documentElement.classList.add('dark');})()</script>
 </head>
 <body>
   <nav class="nav" id="main-nav">
@@ -18,6 +19,7 @@
     </div>
     <div class="nav-right">
       <span class="nav-email" id="navEmail"></span>
+      <button class="theme-btn" id="themeBtnNav" title="Basculer le thème" aria-label="Basculer le thème sombre/clair"><span data-theme-icon></span></button>
       <button class="nav-logout" id="navLogout">Déconnexion</button>
     </div>
   </nav>
@@ -51,6 +53,7 @@
 
   <script src="/js/api.js"></script>
   <script src="/js/groups.js"></script>
+  <script src="/js/theme.js"></script>
   <script src="/js/cookie-banner.js"></script>
 </body>
 </html>

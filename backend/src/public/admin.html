@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Administration — NotesQC</title>
   <link rel="stylesheet" href="/css/style.css">
+  <script>(function(){var t=localStorage.getItem('coba_theme');if(t==='dark')document.documentElement.classList.add('dark');})()</script>
 </head>
 <body>
   <nav class="nav" id="main-nav">
@@ -18,6 +19,7 @@
     </div>
     <div class="nav-right">
       <span class="nav-email" id="navEmail"></span>
+      <button class="theme-btn" id="themeBtnNav" title="Basculer le thème" aria-label="Basculer le thème sombre/clair"><span data-theme-icon></span></button>
       <button class="nav-logout" id="navLogout">Déconnexion</button>
     </div>
   </nav>
@@ -34,6 +36,7 @@
         <button class="admin-tab" data-tab="tests">Tests</button>
         <button class="admin-tab superadmin-only" data-tab="config">Configuration</button>
         <button class="admin-tab superadmin-only" data-tab="deploy">Mise à jour</button>
+        <button class="admin-tab superadmin-only" data-tab="todo">TODO</button>
       </div>
 
       <!-- ── MONITORING ── -->
@@ -215,6 +218,40 @@
         </div>
       </div>
 
+      <!-- ── TODO ── -->
+      <div id="tab-todo" class="hidden">
+        <div class="admin-section">
+          <h3>Fonctionnalités planifiées</h3>
+          <p style="font-size:.875rem;color:var(--text-2);margin-bottom:1.25rem">Liste des fonctionnalités en cours de planification pour NotesQC.</p>
+          <div class="todo-grid">
+            <div class="todo-card">
+              <div class="todo-card-title">Comparaison entre sessions scolaires</div>
+              <div class="todo-card-desc">Comparer les résultats entre deux sessions (ex. 2024-2025 vs 2025-2026) pour visualiser la progression.</div>
+            </div>
+            <div class="todo-card">
+              <div class="todo-card-title">Profil utilisateur étendu</div>
+              <div class="todo-card-desc">Afficher le prénom, nom et code permanent de l'utilisateur. Sera obtenu via une route API dédiée du portail collégial — aucune saisie manuelle.</div>
+            </div>
+            <div class="todo-card">
+              <div class="todo-card-title">Chat entre membres d'un groupe</div>
+              <div class="todo-card-desc">Messagerie simple permettant aux membres d'un même groupe de communiquer directement dans l'application.</div>
+            </div>
+            <div class="todo-card">
+              <div class="todo-card-title">Invitations à rejoindre l'application</div>
+              <div class="todo-card-desc">Permettre aux utilisateurs d'inviter leurs collègues de groupe à créer un compte NotesQC via un lien ou un courriel.</div>
+            </div>
+            <div class="todo-card">
+              <div class="todo-card-title">Double authentification (2FA)</div>
+              <div class="todo-card-desc">Renforcement de la sécurité via une authentification à deux facteurs TOTP (ex. Google Authenticator).</div>
+            </div>
+            <div class="todo-card">
+              <div class="todo-card-title">Push notifications mobiles</div>
+              <div class="todo-card-desc">Notifications push natives via une future application mobile NotesQC disponible sur iOS et Android.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- ── DEPLOY ── -->
       <div id="tab-deploy" class="hidden">
         <div class="admin-section">
@@ -308,6 +345,7 @@
 
   <script src="/js/api.js"></script>
   <script src="/js/admin.js"></script>
+  <script src="/js/theme.js"></script>
   <script src="/js/cookie-banner.js"></script>
 </body>
 </html>

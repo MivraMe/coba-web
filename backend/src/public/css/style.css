@@ -22,6 +22,50 @@
   --nav-h: 60px;
 }
 
+html.dark {
+  --bg: #0f172a;
+  --surface: #1e293b;
+  --border: #334155;
+  --text: #f1f5f9;
+  --text-2: #94a3b8;
+  --text-3: #64748b;
+  --primary-l: #1e3a5f;
+  --success-l: #064e3b;
+  --warning-l: #451a03;
+  --danger-l: #4c0519;
+  --shadow: 0 1px 3px rgba(0,0,0,.35), 0 1px 2px rgba(0,0,0,.2);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,.4), 0 4px 6px -2px rgba(0,0,0,.2);
+}
+
+/* ── THEME TOGGLE ── */
+.theme-btn {
+  background: rgba(255,255,255,.15);
+  border: none; color: #fff;
+  width: 34px; height: 34px;
+  border-radius: 6px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s; flex-shrink: 0;
+}
+.theme-btn:hover { background: rgba(255,255,255,.25); }
+.theme-btn svg { pointer-events: none; }
+
+/* ── TOGGLE SWITCH ── */
+#theme-toggle-checkbox:checked + span { background: var(--primary); }
+#theme-toggle-checkbox:checked ~ #theme-knob { transform: translateX(20px); }
+
+/* ── TODO CARDS ── */
+.todo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
+.todo-card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.25rem;
+  border-left: 4px solid var(--primary);
+  display: flex; flex-direction: column; gap: .5rem;
+}
+.todo-card-title { font-size: .95rem; font-weight: 600; color: var(--text); }
+.todo-card-desc { font-size: .85rem; color: var(--text-2); line-height: 1.5; }
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html { font-size: 16px; -webkit-text-size-adjust: 100%; }

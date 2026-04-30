@@ -1,4 +1,4 @@
-const ALL_TABS = ['monitoring', 'users', 'tests', 'config', 'deploy'];
+const ALL_TABS = ['monitoring', 'users', 'tests', 'config', 'deploy', 'todo'];
 
 document.addEventListener('DOMContentLoaded', async () => {
   const user = await API.requireAuth();
