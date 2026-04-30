@@ -180,26 +180,14 @@
               </div>
             </div>
 
-            <h3 style="margin:1.25rem 0 .75rem">SMTP (courriel)</h3>
+            <h3 style="margin:1.25rem 0 .75rem">Resend (courriel)</h3>
             <div class="config-grid">
               <div class="form-group">
-                <label class="form-label">SMTP_HOST</label>
-                <input type="text" class="form-control" name="SMTP_HOST">
+                <label class="form-label">RESEND_API_KEY</label>
+                <input type="password" class="form-control" name="RESEND_API_KEY" autocomplete="new-password" placeholder="re_xxxxxxxxxxxxxxxxxxxx">
               </div>
               <div class="form-group">
-                <label class="form-label">SMTP_PORT</label>
-                <input type="number" class="form-control" name="SMTP_PORT" min="1" max="65535" placeholder="587">
-              </div>
-              <div class="form-group">
-                <label class="form-label">SMTP_USER</label>
-                <input type="text" class="form-control" name="SMTP_USER">
-              </div>
-              <div class="form-group">
-                <label class="form-label">SMTP_PASSWORD</label>
-                <input type="password" class="form-control" name="SMTP_PASSWORD" autocomplete="new-password">
-              </div>
-              <div class="form-group" style="grid-column:1/-1">
-                <label class="form-label">SMTP_FROM</label>
+                <label class="form-label">SMTP_FROM <span style="color:var(--text-3)">(adresse expéditeur)</span></label>
                 <input type="text" class="form-control" name="SMTP_FROM" placeholder="NotesQC &lt;noreply@example.com&gt;">
               </div>
             </div>

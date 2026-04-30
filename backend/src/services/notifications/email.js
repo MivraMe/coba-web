@@ -1,23 +1,15 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
-function createTransport() {
-  const host = process.env.SMTP_HOST;
-  if (!host) return null;
-  return nodemailer.createTransport({
-    host,
-    port: parseInt(process.env.SMTP_PORT) || 587,
-    secure: parseInt(process.env.SMTP_PORT) === 465,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASSWORD,
-    },
-  });
+function getClient() {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return null;
+  return new Resend(apiKey);
 }
 
 async function sendNewGradeEmail(to, subject, { courseCode, courseName, assignment, score }) {
-  const transport = createTransport();
-  if (!transport) {
-    console.warn('SMTP non configuré, courriel non envoyé');
+  const client = getClient();
+  if (!client) {
+    console.warn('RESEND_API_KEY non configuré, courriel non envoyé');
     return;
   }
 
@@ -34,12 +26,14 @@ async function sendNewGradeEmail(to, subject, { courseCode, courseName, assignme
     </div>
   `;
 
-  await transport.sendMail({
-    from: process.env.SMTP_FROM || process.env.SMTP_USER,
+  const { error } = await client.emails.send({
+    from: process.env.SMTP_FROM || 'NotesQC <noreply@notesqc.ca>',
     to,
     subject,
     html,
   });
+
+  if (error) throw new Error(`Resend erreur: ${error.message}`);
 }
 
 module.exports = { sendNewGradeEmail };
