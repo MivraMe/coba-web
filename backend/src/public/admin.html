@@ -30,6 +30,8 @@
 
       <div class="admin-tabs">
         <button class="admin-tab active" data-tab="monitoring">Monitoring</button>
+        <button class="admin-tab" data-tab="users">Utilisateurs</button>
+        <button class="admin-tab" data-tab="tests">Tests</button>
         <button class="admin-tab" data-tab="config">Configuration</button>
         <button class="admin-tab" data-tab="deploy">Mise à jour</button>
       </div>
@@ -72,6 +74,93 @@
           <h3>Erreurs API (dernières 24 h)</h3>
           <div id="errors-list" style="font-size:.875rem;color:var(--text-2)">Chargement…</div>
         </div>
+      </div>
+
+      <!-- ── USERS ── -->
+      <div id="tab-users" class="hidden">
+        <div class="admin-section">
+          <div class="flex-between mb-1">
+            <h3 style="margin-bottom:0">Liste des utilisateurs</h3>
+            <button class="btn btn-sm btn-secondary" id="users-refresh-btn">Actualiser</button>
+          </div>
+          <div id="users-alert" class="alert alert-hidden"></div>
+          <div style="overflow-x:auto">
+            <table class="admin-table" id="users-table">
+              <thead>
+                <tr>
+                  <th>Courriel</th>
+                  <th>Inscription</th>
+                  <th>Dernière synchro</th>
+                  <th>Groupes</th>
+                  <th>Notif.</th>
+                  <th>Rôle</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="users-tbody"><tr><td colspan="7" style="color:var(--text-3);text-align:center">Chargement…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TESTS ── -->
+      <div id="tab-tests" class="hidden">
+
+        <div class="admin-section">
+          <h3>Test d'envoi de notification</h3>
+          <div id="notif-test-alert" class="alert alert-hidden mb-1"></div>
+          <div class="config-grid" style="margin-bottom:.75rem">
+            <div class="form-group">
+              <label class="form-label">Utilisateur</label>
+              <select class="form-control" id="notif-test-user">
+                <option value="">Chargement…</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Type</label>
+              <select class="form-control" id="notif-test-type">
+                <option value="email">Courriel</option>
+                <option value="sms">SMS</option>
+                <option value="both">Les deux</option>
+              </select>
+            </div>
+            <div class="form-group" style="grid-column:1/-1">
+              <label class="form-label">Message personnalisé <span style="color:var(--text-3)">(optionnel)</span></label>
+              <input type="text" class="form-control" id="notif-test-msg" placeholder="Message de test par défaut">
+            </div>
+          </div>
+          <button class="btn btn-primary" id="notif-test-btn">Envoyer</button>
+        </div>
+
+        <div class="admin-section">
+          <h3>Test de synchronisation</h3>
+          <div id="sync-test-alert" class="alert alert-hidden mb-1"></div>
+          <div class="form-group" style="max-width:360px">
+            <label class="form-label">Groupe</label>
+            <select class="form-control" id="sync-test-group">
+              <option value="all">Tous les groupes</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" id="sync-test-btn">Forcer la synchro</button>
+        </div>
+
+        <div class="admin-section">
+          <h3>Test de l'API portail</h3>
+          <div id="portal-test-alert" class="alert alert-hidden mb-1"></div>
+          <div class="config-grid" style="margin-bottom:.75rem">
+            <div class="form-group">
+              <label class="form-label">Identifiant portail</label>
+              <input type="text" class="form-control" id="portal-test-user" autocomplete="off">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Mot de passe portail</label>
+              <input type="password" class="form-control" id="portal-test-pass" autocomplete="new-password">
+            </div>
+          </div>
+          <button class="btn btn-primary" id="portal-test-btn">Tester</button>
+          <pre id="portal-test-output" class="deploy-console hidden" style="margin-top:.75rem;max-height:300px"></pre>
+        </div>
+
       </div>
 
       <!-- ── CONFIG ── -->

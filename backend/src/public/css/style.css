@@ -70,7 +70,7 @@ a:hover { text-decoration: underline; }
   width: 100%; max-width: 420px;
 }
 .auth-logo { text-align: center; margin-bottom: 1.75rem; }
-.auth-logo-img { height: 160px; margin-bottom: 1rem; }
+.auth-logo-img { max-width: 100%; max-height: 80px; object-fit: contain; margin-bottom: 1rem; }
 .auth-sub { color: var(--text-2); font-size: .9rem; text-align: center; margin-bottom: 1.5rem; }
 
 .onboarding-header-top {
@@ -539,7 +539,6 @@ tr:hover td { background: var(--bg); }
   .page { padding-top: calc(var(--nav-h) + 1rem); padding-bottom: 70px; }
   .container, .container-sm { padding: 0 1rem; }
   .auth-card { padding: 2rem 1.25rem; }
-  .auth-logo-img { height: 140px; }
   .onboarding-wrap { padding: 1.25rem 1rem; }
   .onboarding-panel { padding: 1.25rem; }
   .steps-bar { max-width: 100%; }
@@ -565,7 +564,6 @@ tr:hover td { background: var(--bg); }
   #cookie-banner { flex-direction: column; align-items: flex-start; gap: .75rem; }
 }
 @media (max-width: 480px) {
-  .auth-logo-img { height: 120px; }
   .global-stat-value { font-size: 1.5rem; }
   .stat-value { font-size: 1.4rem; }
   .avg-value { font-size: 1.1rem; }
