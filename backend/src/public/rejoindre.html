@@ -70,10 +70,7 @@
       if (existingToken) {
         try {
           const meRes = await API.request('GET', '/auth/me');
-          if (meRes && meRes.ok) {
-            show(stateLoggedIn);
-            return;
-          }
+          if (meRes && meRes.ok) { show(stateLoggedIn); return; }
         } catch {}
         API.clearToken();
         API.clearUser();
@@ -97,12 +94,19 @@
       document.getElementById('invite-msg').textContent =
         `${data.inviter_email} t'invite à rejoindre NotesQC pour suivre tes notes de cours.`;
 
-      const expiry = new Date(data.expires_at).toLocaleDateString('fr-CA', {
-        year: 'numeric', month: 'long', day: 'numeric',
-      });
-      document.getElementById('invite-expiry').textContent = `Ce lien expire le ${expiry}.`;
+      if (data.expires_at) {
+        const expiry = new Date(data.expires_at).toLocaleDateString('fr-CA', {
+          year: 'numeric', month: 'long', day: 'numeric',
+        });
+        document.getElementById('invite-expiry').textContent = `Ce lien expire le ${expiry}.`;
+      }
 
-      const registerUrl = `/register?email=${encodeURIComponent(data.email)}&token=${encodeURIComponent(token)}`;
+      // Pour un lien de partage (type=link), pas de pré-remplissage d'email
+      // Pour une invitation ciblée (type=email), pré-remplir email et token
+      let registerUrl = `/register?token=${encodeURIComponent(token)}`;
+      if (data.type === 'email' && data.email) {
+        registerUrl += `&email=${encodeURIComponent(data.email)}`;
+      }
       document.getElementById('btn-create').href = registerUrl;
 
       show(stateValid);

@@ -157,26 +157,56 @@
           <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
           Invitations
         </div>
+
+        <!-- Invitation par courriel -->
         <div id="alert-invitation" class="alert alert-hidden"></div>
-        <div class="card">
+        <div class="card" style="margin-bottom:.875rem">
+          <p style="font-weight:600;font-size:.875rem;margin-bottom:.75rem">Invitation par courriel</p>
           <form id="form-invitation">
             <div class="form-group" style="margin-bottom:0">
-              <label class="form-label" for="invite-email">Inviter un étudiant par courriel</label>
-              <div style="display:flex;gap:.5rem;margin-top:.4rem">
+              <div style="display:flex;gap:.5rem">
                 <input type="email" id="invite-email" class="form-control" placeholder="etudiant@exemple.com" autocomplete="off">
                 <button type="submit" class="btn btn-primary btn-sm" id="btn-invite" style="white-space:nowrap;flex-shrink:0">Inviter</button>
               </div>
-              <p class="form-hint">Un courriel avec un lien de création de compte lui sera envoyé.</p>
+              <p class="form-hint">Un courriel personnalisé sera envoyé avec un lien valide 7 jours.</p>
             </div>
           </form>
           <div id="invite-link-block" style="display:none;margin-top:1rem;padding:.75rem;background:var(--bg-2);border-radius:.5rem;border:1px solid var(--border)">
-            <p class="text-sm" style="font-weight:500;margin-bottom:.4rem">Lien d'invitation (valide 7 jours)</p>
+            <p class="text-sm" style="font-weight:500;margin-bottom:.4rem">Lien de l'invitation envoyée</p>
             <div style="display:flex;gap:.5rem;align-items:center">
               <input id="invite-link-input" type="text" class="form-control" readonly style="font-size:.8rem;font-family:monospace">
               <button id="btn-copy-link" class="btn btn-secondary btn-sm" style="white-space:nowrap;flex-shrink:0" type="button">Copier</button>
             </div>
           </div>
           <div id="invitations-list" style="margin-top:1.25rem"></div>
+        </div>
+
+        <!-- Lien de partage -->
+        <div id="alert-share-link" class="alert alert-hidden"></div>
+        <div class="card">
+          <p style="font-weight:600;font-size:.875rem;margin-bottom:.75rem">Lien de partage de groupe</p>
+          <p class="text-sm text-muted" style="margin-bottom:.875rem">Partagez ce lien avec plusieurs amis — toute personne qui l'ouvre peut créer un compte NotesQC.</p>
+          <div style="display:flex;gap:.5rem;align-items:flex-end;flex-wrap:wrap">
+            <div class="form-group" style="flex:1;min-width:130px;margin-bottom:0">
+              <label class="form-label" for="link-expires-in">Validité</label>
+              <select id="link-expires-in" class="form-control">
+                <option value="1">1 jour</option>
+                <option value="7" selected>7 jours</option>
+                <option value="30">30 jours</option>
+                <option value="90">90 jours</option>
+                <option value="">Jamais</option>
+              </select>
+            </div>
+            <button type="button" id="btn-create-link" class="btn btn-primary btn-sm" style="flex-shrink:0;white-space:nowrap">Créer un lien</button>
+          </div>
+          <div id="new-share-link-block" style="display:none;margin-top:1rem;padding:.75rem;background:var(--bg-2);border-radius:.5rem;border:1px solid var(--border)">
+            <p class="text-sm" style="font-weight:500;margin-bottom:.4rem" id="new-share-link-label">Nouveau lien</p>
+            <div style="display:flex;gap:.5rem;align-items:center">
+              <input id="new-share-link-input" type="text" class="form-control" readonly style="font-size:.8rem;font-family:monospace">
+              <button id="btn-copy-share-link" class="btn btn-secondary btn-sm" type="button" style="white-space:nowrap;flex-shrink:0">Copier</button>
+            </div>
+          </div>
+          <div id="share-links-list" style="margin-top:1.25rem"></div>
         </div>
       </div>
 

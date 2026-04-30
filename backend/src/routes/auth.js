@@ -27,11 +27,31 @@ router.post('/register', async (req, res) => {
     const user = rows[0];
 
     if (invitation_token) {
-      await pool.query(
-        `UPDATE user_invitations SET used_at = NOW()
-         WHERE token = $1 AND used_at IS NULL AND expires_at > NOW() AND email = $2`,
-        [invitation_token, normalizedEmail]
-      ).catch(() => {});
+      const { rows: invRows } = await pool.query(
+        'SELECT id, email FROM user_invitations WHERE token = $1',
+        [invitation_token]
+      ).catch(() => ({ rows: [] }));
+      const inv = invRows[0];
+      if (inv) {
+        if (inv.email !== null) {
+          // Invitation ciblée : marquer comme utilisée
+          await pool.query(
+            `UPDATE user_invitations SET used_at = NOW()
+             WHERE id = $1 AND used_at IS NULL AND email = $2
+             AND (expires_at IS NULL OR expires_at > NOW())`,
+            [inv.id, normalizedEmail]
+          ).catch(() => {});
+        } else {
+          // Lien de partage : incrémenter le compteur
+          await pool.query(
+            `UPDATE user_invitations SET use_count = use_count + 1
+             WHERE id = $1
+             AND (expires_at IS NULL OR expires_at > NOW())
+             AND (max_uses IS NULL OR use_count < max_uses)`,
+            [inv.id]
+          ).catch(() => {});
+        }
+      }
     }
 
     res.status(201).json({ token: signToken(user.id, user.email, user.is_admin, user.role), user });
