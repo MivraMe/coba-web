@@ -100,7 +100,7 @@ a:hover { text-decoration: underline; }
   width: 100%; max-width: 420px;
 }
 .auth-logo { text-align: center; margin-bottom: 1.75rem; }
-.auth-logo-img { height: 40px; margin-bottom: .75rem; }
+.auth-logo-img { height: 64px; margin-bottom: .75rem; }
 .auth-sub { color: var(--text-2); font-size: .9rem; text-align: center; margin-bottom: 1.5rem; }
 
 .onboarding-header-top {
@@ -539,10 +539,56 @@ tr:hover td { background: var(--bg); }
 @media (max-width: 640px) { .config-grid { grid-template-columns: 1fr; } }
 
 /* ── RESPONSIVE ── */
-@media (max-width: 640px) {
-  .form-row { grid-template-columns: 1fr; }
+@media (max-width: 768px) {
+  .nav { padding: 0 1rem; }
+  .nav-links { display: none; }
   .nav-email { display: none; }
-  .stats-grid { grid-template-columns: 1fr 1fr; }
+  .nav-logo { height: 18px; }
+
+  .page { padding-top: calc(var(--nav-h) + 1rem); }
+  .container, .container-sm { padding: 0 1rem; }
+
+  .auth-card { padding: 2rem 1.25rem; }
+  .auth-logo-img { height: 52px; }
+
+  .onboarding-wrap { padding: 1.25rem 1rem; }
+  .onboarding-panel { padding: 1.25rem; }
+  .steps-bar { max-width: 100%; }
+  .step-label { display: none; }
+
+  .form-row { grid-template-columns: 1fr; }
+  .form-control { font-size: 1rem; padding: .65rem .85rem; }
+  .btn { padding: .65rem 1rem; font-size: .9rem; }
+
   .courses-grid { grid-template-columns: 1fr; }
-  #cookie-banner { flex-direction: column; align-items: flex-start; }
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+  .course-averages { gap: 1rem; }
+
+  .detail-panel { padding: 1rem; }
+  .detail-header { flex-wrap: wrap; gap: .5rem; }
+  .detail-header > div:first-child { flex: 1 1 100%; }
+  .chart-container { height: 200px; }
+
+  .global-stats-row { gap: 1rem; }
+
+  .account-section .card { padding: 1rem; }
+
+  .admin-stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .config-grid { grid-template-columns: 1fr; }
+  .admin-section { padding: 1rem; }
+  .admin-tabs { overflow-x: auto; }
+
+  table { font-size: .8rem; }
+  th, td { padding: .5rem .5rem; }
+
+  #cookie-banner { flex-direction: column; align-items: flex-start; gap: .75rem; }
+}
+
+@media (max-width: 480px) {
+  .auth-logo-img { height: 44px; }
+  .global-stat-value { font-size: 1.5rem; }
+  .stat-value { font-size: 1.4rem; }
+  .avg-value { font-size: 1.1rem; }
+  .year-filter { gap: .35rem; }
+  .year-btn { font-size: .8rem; padding: .3rem .65rem; }
 }

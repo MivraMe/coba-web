@@ -380,8 +380,12 @@ function renderChart(data) {
 
   const isMoyenne = chartMode === 'moyenne';
 
-  const personalData = pts.map(p => ({ x: p.cumulative_weight_pct, y: isMoyenne ? p.personal_running_avg : p.personal_pct }));
-  const groupData    = pts.map(p => ({ x: p.cumulative_weight_pct, y: isMoyenne ? p.group_running_avg    : p.group_median_pct }));
+  const firstPersonal = isMoyenne ? pts[0].personal_running_avg : pts[0].personal_pct;
+  const firstGroup    = isMoyenne ? pts[0].group_running_avg    : pts[0].group_median_pct;
+  const origin = (x0, y0) => (y0 !== null ? [{ x: 0, y: y0 }] : []);
+
+  const personalData = [...origin(0, firstPersonal), ...pts.map(p => ({ x: p.cumulative_weight_pct, y: isMoyenne ? p.personal_running_avg : p.personal_pct }))];
+  const groupData    = [...origin(0, firstGroup),    ...pts.map(p => ({ x: p.cumulative_weight_pct, y: isMoyenne ? p.group_running_avg    : p.group_median_pct }))];
 
   gradeChart = new Chart(canvas, {
     type: 'line',
