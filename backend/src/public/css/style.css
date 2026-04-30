@@ -38,70 +38,63 @@ a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
 /* ── NAV ── */
-.nav {
+.main-nav {
   position: fixed; top: 0; left: 0; right: 0;
-  height: var(--nav-h);
+  height: 64px;
   background: var(--primary);
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 1.5rem;
-  z-index: 100;
-  box-shadow: var(--shadow);
-}
-.nav-brand {
-  color: #fff;
-  font-weight: 700;
-  font-size: 1.1rem;
-  letter-spacing: -.01em;
-  text-decoration: none;
   display: flex; align-items: center;
+  padding: 0 1.5rem;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0,0,0,.15);
 }
-.nav-logo { height: 46px; display: block; }
-.nav-links { display: flex; gap: .25rem; }
+.nav-brand { display: flex; align-items: center; text-decoration: none; flex-shrink: 0; }
+.nav-logo { height: 44px; display: block; }
+.nav-links {
+  display: flex; align-items: center;
+  gap: 0.25rem; margin-left: auto;
+}
 .nav-link {
-  color: rgba(255,255,255,.8);
+  color: rgba(255,255,255,.85);
   padding: .4rem .85rem;
-  border-radius: var(--radius-sm);
+  border-radius: 6px;
   font-size: .9rem;
-  transition: background .15s, color .15s;
   text-decoration: none;
+  transition: background .15s;
+  white-space: nowrap;
 }
 .nav-link:hover, .nav-link.active {
-  background: rgba(255,255,255,.15);
-  color: #fff;
-  text-decoration: none;
+  background: rgba(255,255,255,.18); color: #fff; text-decoration: none;
 }
-.nav-right { display: flex; align-items: center; gap: .75rem; }
-.nav-email { color: rgba(255,255,255,.7); font-size: .85rem; }
+.nav-email { color: rgba(255,255,255,.65); font-size: .85rem; padding: 0 .5rem; white-space: nowrap; }
 .nav-logout {
-  background: rgba(255,255,255,.15);
-  border: none; color: #fff;
-  padding: .35rem .75rem; border-radius: var(--radius-sm);
-  cursor: pointer; font-size: .85rem;
-  transition: background .15s;
+  background: rgba(255,255,255,.15); border: none; color: #fff;
+  padding: .4rem .85rem; border-radius: 6px; cursor: pointer;
+  font-size: .85rem; white-space: nowrap; transition: background .15s;
 }
-.nav-logout:hover { background: rgba(255,255,255,.25); }
+.nav-logout:hover { background: rgba(255,255,255,.28); }
 .nav-logout-link {
   background: none; border: none; cursor: pointer;
-  color: rgba(255,255,255,.8); font-size: 1rem;
-  padding: .65rem 1rem; border-radius: var(--radius-sm);
-  text-align: left; width: 100%;
-  transition: background .15s, color .15s;
-  margin-top: .25rem;
-  border-top: 1px solid rgba(255,255,255,.2);
+  color: rgba(255,255,255,.85); font-size: 1rem;
+  padding: .7rem 1rem; text-align: left; width: 100%;
+  border-top: 1px solid rgba(255,255,255,.2); margin-top: .25rem;
+  border-radius: 0;
 }
-.nav-logout-link:hover { background: rgba(255,255,255,.15); color: #fff; }
-
-/* Burger button — hidden on desktop, shown on mobile via media query */
-.burger-menu {
+.nav-logout-link:hover { background: rgba(255,255,255,.12); color: #fff; }
+/* Burger — hidden on desktop */
+.burger-btn {
   display: none;
-  flex-direction: column; gap: 5px;
-  background: none; border: none; cursor: pointer;
-  padding: .35rem; color: #fff;
+  flex-direction: column; justify-content: center; align-items: center;
+  gap: 5px; background: none; border: none; cursor: pointer;
+  padding: 8px; margin-left: auto; color: #fff; flex-shrink: 0;
 }
-.burger-menu span { display: block; width: 25px; height: 3px; background: currentColor; border-radius: 2px; }
+.burger-btn span {
+  display: block; width: 24px; height: 2px;
+  background: #fff; border-radius: 2px;
+  transition: transform .2s, opacity .2s;
+}
 
 /* ── LAYOUT ── */
-.page { padding-top: calc(var(--nav-h) + 1.5rem); }
+.page { padding-top: calc(64px + 1.5rem); }
 .container { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem; }
 .container-sm { max-width: 500px; margin: 0 auto; padding: 0 1.5rem; }
 
@@ -559,67 +552,52 @@ tr:hover td { background: var(--bg); }
 
 /* ── RESPONSIVE ── */
 @media (max-width: 768px) {
-  .nav { padding: 0 1rem; }
+  .main-nav { padding: 0 1rem; }
   .nav-email { display: none; }
-
-  /* Burger button visible on mobile */
-  .burger-menu { display: flex; }
-
-  /* Nav links hidden by default, shown when .open is toggled */
+  .nav-logout { display: none; }
+  .burger-btn { display: flex; }
   .nav-links {
     display: none;
-    position: absolute;
-    top: var(--nav-h);
-    left: 0; right: 0;
+    position: fixed;
+    top: 64px; left: 0; right: 0;
     background: var(--primary);
-    flex-direction: column;
+    flex-direction: column; align-items: stretch;
     padding: .5rem .75rem .75rem;
-    gap: .15rem;
-    box-shadow: 0 6px 20px rgba(0,0,0,.25);
-    z-index: 99;
+    gap: 0;
+    box-shadow: 0 6px 24px rgba(0,0,0,.35);
+    z-index: 999;
+    margin-left: 0;
   }
   .nav-links.open { display: flex; }
-  .nav-link { padding: .65rem 1rem; font-size: 1rem; }
-
-  .page { padding-top: calc(var(--nav-h) + 1rem); }
+  .nav-link { padding: .7rem 1rem; font-size: 1rem; }
+  .page { padding-top: calc(64px + 1rem); }
   .container, .container-sm { padding: 0 1rem; }
-
   .auth-card { padding: 2rem 1.25rem; }
   .auth-logo-img { height: 140px; }
-
   .onboarding-wrap { padding: 1.25rem 1rem; }
   .onboarding-panel { padding: 1.25rem; }
   .steps-bar { max-width: 100%; }
   .step-label { display: none; }
-
   .form-row { grid-template-columns: 1fr; }
   .form-control { font-size: 1rem; padding: .65rem .85rem; }
   .btn { padding: .65rem 1rem; font-size: .9rem; }
-
   .courses-grid { grid-template-columns: 1fr; }
   .stats-grid { grid-template-columns: 1fr 1fr; }
   .course-averages { gap: 1rem; }
-
   .detail-panel { padding: 1rem; }
   .detail-header { flex-wrap: wrap; gap: .5rem; }
   .detail-header > div:first-child { flex: 1 1 100%; }
   .chart-container { height: 200px; }
-
   .global-stats-row { gap: 1rem; }
-
   .account-section .card { padding: 1rem; }
-
   .admin-stat-grid { grid-template-columns: repeat(2, 1fr); }
   .config-grid { grid-template-columns: 1fr; }
   .admin-section { padding: 1rem; }
   .admin-tabs { overflow-x: auto; }
-
   table { font-size: .8rem; }
   th, td { padding: .5rem .5rem; }
-
   #cookie-banner { flex-direction: column; align-items: flex-start; gap: .75rem; }
 }
-
 @media (max-width: 480px) {
   .auth-logo-img { height: 120px; }
   .global-stat-value { font-size: 1.5rem; }

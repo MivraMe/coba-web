@@ -127,50 +127,29 @@ function setupNav(user) {
   const nav = document.getElementById('main-nav');
   if (!nav || !user) return;
 
-  nav.querySelector('.nav-email').textContent = user.email;
-  nav.querySelector('.nav-logout').addEventListener('click', () => API.logout());
+  const emailEl = nav.querySelector('.nav-email');
+  if (emailEl) emailEl.textContent = user.email;
 
-  // Inject admin link if needed
+  nav.querySelectorAll('.nav-logout').forEach(el => el.addEventListener('click', () => API.logout()));
+
   if (user.is_admin) {
+    const menu = document.getElementById('navMenu');
     const a = document.createElement('a');
     a.href = '/admin'; a.className = 'nav-link'; a.textContent = 'Admin';
-    nav.querySelector('.nav-links').appendChild(a);
+    const emailSpan = menu.querySelector('.nav-email');
+    menu.insertBefore(a, emailSpan);
   }
 
-  // Inject logout into mobile dropdown
+  // Inject logout link for mobile dropdown (shown after nav links)
   const logoutLink = document.createElement('button');
   logoutLink.className = 'nav-logout-link';
   logoutLink.textContent = 'Déconnexion';
   logoutLink.addEventListener('click', () => API.logout());
-  nav.querySelector('.nav-links').appendChild(logoutLink);
+  const menu = document.getElementById('navMenu');
+  menu.appendChild(logoutLink);
 
-  // Active link
   const path = window.location.pathname;
   nav.querySelectorAll('.nav-link').forEach(a => {
     if (a.getAttribute('href') === path) a.classList.add('active');
   });
-
-  // Burger menu toggle
-  const burgerBtn = document.getElementById('burgerBtn');
-  const navLinks = nav.querySelector('.nav-links');
-  if (burgerBtn) {
-    burgerBtn.addEventListener('click', () => {
-      navLinks.classList.toggle('open');
-    });
-    document.addEventListener('click', (e) => {
-      if (!nav.contains(e.target)) navLinks.classList.remove('open');
-    });
-    navLinks.addEventListener('click', () => navLinks.classList.remove('open'));
-  }
 }
-
-// Burger menu — initialized immediately on DOM ready, independent of auth
-document.addEventListener('DOMContentLoaded', () => {
-  const burgerBtn = document.getElementById('burgerBtn');
-  if (!burgerBtn) return;
-  const navLinks = document.querySelector('#main-nav .nav-links');
-  burgerBtn.addEventListener('click', () => navLinks.classList.toggle('open'));
-  document.addEventListener('click', (e) => {
-    if (!e.target.closest('#main-nav')) navLinks.classList.remove('open');
-  });
-});

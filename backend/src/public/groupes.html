@@ -7,16 +7,18 @@
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-  <nav class="nav" id="main-nav">
-    <a class="nav-brand" href="/dashboard"><img src="/logo/notesQC_white.png" alt="NotesQC" class="nav-logo"></a>
-    <div class="nav-links">
+  <nav class="main-nav" id="main-nav">
+    <a href="/dashboard" class="nav-brand">
+      <img src="/logo/notesQC_white.png" alt="NotesQC" class="nav-logo">
+    </a>
+    <button id="burgerBtn" class="burger-btn" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="nav-links" id="navMenu">
       <a href="/dashboard" class="nav-link">Tableau de bord</a>
       <a href="/groupes" class="nav-link">Groupes</a>
       <a href="/compte" class="nav-link">Mon compte</a>
-    </div>
-    <div class="nav-right">
       <span class="nav-email"></span>
-      <button class="burger-menu" id="burgerBtn" aria-label="Menu"><span></span><span></span><span></span></button>
       <button class="nav-logout">Déconnexion</button>
     </div>
   </nav>
@@ -36,5 +38,19 @@
   <script src="/js/api.js"></script>
   <script src="/js/groups.js"></script>
   <script src="/js/cookie-banner.js"></script>
+  <script>
+    (function() {
+      var btn = document.getElementById('burgerBtn');
+      var menu = document.getElementById('navMenu');
+      if (!btn || !menu) return;
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        menu.classList.toggle('open');
+      });
+      document.addEventListener('click', function(e) {
+        if (!e.target.closest('#main-nav')) menu.classList.remove('open');
+      });
+    })();
+  </script>
 </body>
 </html>
