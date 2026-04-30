@@ -5,6 +5,7 @@ let newGroups = [];
 document.addEventListener('DOMContentLoaded', async () => {
   const user = await API.requireAuth();
   if (!user) return;
+  if (user.role === 'superadmin') { window.location.href = '/admin'; return; }
   if (user.onboarding_completed) { window.location.href = '/dashboard'; return; }
 
   // Restore step from DB

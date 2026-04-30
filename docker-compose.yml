@@ -25,18 +25,16 @@ services:
       DATABASE_URL: postgresql://${DB_USER:-cobauser}:${DB_PASSWORD}@db:5432/${DB_NAME:-cobadb}
       JWT_SECRET: ${JWT_SECRET}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
-      SMTP_HOST: ${SMTP_HOST:-}
-      SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_USER: ${SMTP_USER:-}
-      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
       SMTP_FROM: ${SMTP_FROM:-}
-      VOIPMS_USERNAME: ${VOIPMS_USERNAME:-}
-      VOIPMS_PASSWORD: ${VOIPMS_PASSWORD:-}
-      VOIPMS_DID: ${VOIPMS_DID:-}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER:-}
       PORTAL_BASE_URL: ${PORTAL_BASE_URL}
       NODE_ENV: ${NODE_ENV:-production}
       REFRESH_INTERVAL_MINUTES: ${REFRESH_INTERVAL_MINUTES:-5}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
     volumes:
       # Required for the admin deploy endpoint (docker-in-docker)
       - /var/run/docker.sock:/var/run/docker.sock

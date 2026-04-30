@@ -32,8 +32,8 @@
         <button class="admin-tab active" data-tab="monitoring">Monitoring</button>
         <button class="admin-tab" data-tab="users">Utilisateurs</button>
         <button class="admin-tab" data-tab="tests">Tests</button>
-        <button class="admin-tab" data-tab="config">Configuration</button>
-        <button class="admin-tab" data-tab="deploy">Mise à jour</button>
+        <button class="admin-tab superadmin-only" data-tab="config">Configuration</button>
+        <button class="admin-tab superadmin-only" data-tab="deploy">Mise à jour</button>
       </div>
 
       <!-- ── MONITORING ── -->
@@ -180,43 +180,31 @@
               </div>
             </div>
 
-            <h3 style="margin:1.25rem 0 .75rem">SMTP (courriel)</h3>
+            <h3 style="margin:1.25rem 0 .75rem">Resend (courriel)</h3>
             <div class="config-grid">
               <div class="form-group">
-                <label class="form-label">SMTP_HOST</label>
-                <input type="text" class="form-control" name="SMTP_HOST">
+                <label class="form-label">RESEND_API_KEY</label>
+                <input type="password" class="form-control" name="RESEND_API_KEY" autocomplete="new-password" placeholder="re_xxxxxxxxxxxxxxxxxxxx">
               </div>
               <div class="form-group">
-                <label class="form-label">SMTP_PORT</label>
-                <input type="number" class="form-control" name="SMTP_PORT" min="1" max="65535" placeholder="587">
-              </div>
-              <div class="form-group">
-                <label class="form-label">SMTP_USER</label>
-                <input type="text" class="form-control" name="SMTP_USER">
-              </div>
-              <div class="form-group">
-                <label class="form-label">SMTP_PASSWORD</label>
-                <input type="password" class="form-control" name="SMTP_PASSWORD" autocomplete="new-password">
-              </div>
-              <div class="form-group" style="grid-column:1/-1">
-                <label class="form-label">SMTP_FROM</label>
+                <label class="form-label">SMTP_FROM <span style="color:var(--text-3)">(adresse expéditeur)</span></label>
                 <input type="text" class="form-control" name="SMTP_FROM" placeholder="NotesQC &lt;noreply@example.com&gt;">
               </div>
             </div>
 
-            <h3 style="margin:1.25rem 0 .75rem">VoIP.ms (SMS)</h3>
+            <h3 style="margin:1.25rem 0 .75rem">Twilio (SMS)</h3>
             <div class="config-grid">
               <div class="form-group">
-                <label class="form-label">VOIPMS_USERNAME</label>
-                <input type="text" class="form-control" name="VOIPMS_USERNAME">
+                <label class="form-label">TWILIO_ACCOUNT_SID</label>
+                <input type="text" class="form-control" name="TWILIO_ACCOUNT_SID" placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
               </div>
               <div class="form-group">
-                <label class="form-label">VOIPMS_PASSWORD</label>
-                <input type="password" class="form-control" name="VOIPMS_PASSWORD" autocomplete="new-password">
+                <label class="form-label">TWILIO_AUTH_TOKEN</label>
+                <input type="password" class="form-control" name="TWILIO_AUTH_TOKEN" autocomplete="new-password">
               </div>
               <div class="form-group">
-                <label class="form-label">VOIPMS_DID</label>
-                <input type="text" class="form-control" name="VOIPMS_DID" placeholder="5141234567">
+                <label class="form-label">TWILIO_PHONE_NUMBER</label>
+                <input type="text" class="form-control" name="TWILIO_PHONE_NUMBER" placeholder="+15141234567">
               </div>
             </div>
 
@@ -260,6 +248,63 @@
       Mon compte
     </a>
   </nav>
+
+  <!-- ── MODAL ÉDITION UTILISATEUR ── -->
+  <div id="edit-user-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Modifier l'utilisateur</h3>
+        <button class="modal-close-btn" id="edit-modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="edit-modal-alert" class="alert alert-hidden mb-1"></div>
+        <input type="hidden" id="edit-user-id">
+        <div class="config-grid">
+          <div class="form-group">
+            <label class="form-label">Courriel</label>
+            <input type="email" class="form-control" id="edit-email">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Mot de passe <span style="color:var(--text-3)">(laisser vide pour ne pas changer)</span></label>
+            <input type="password" class="form-control" id="edit-password" autocomplete="new-password" placeholder="••••••••">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Téléphone</label>
+            <input type="tel" class="form-control" id="edit-phone" placeholder="+15141234567">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Rôle</label>
+            <select class="form-control" id="edit-role">
+              <option value="user">Utilisateur</option>
+              <option value="superadmin">Superadmin</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Identifiant portail</label>
+            <input type="text" class="form-control" id="edit-portal-user" autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Mot de passe portail <span style="color:var(--text-3)">(laisser vide pour ne pas changer)</span></label>
+            <input type="password" class="form-control" id="edit-portal-pass" autocomplete="new-password" placeholder="••••••••">
+          </div>
+        </div>
+        <div style="display:flex;gap:1.5rem;margin-top:.25rem">
+          <label class="form-check">
+            <input type="checkbox" id="edit-notify-email">
+            <span>Notifications courriel</span>
+          </label>
+          <label class="form-check">
+            <input type="checkbox" id="edit-notify-sms">
+            <span>Notifications SMS</span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="edit-modal-cancel">Annuler</button>
+        <button class="btn btn-primary" id="edit-modal-save">Sauvegarder</button>
+      </div>
+    </div>
+  </div>
 
   <script src="/js/api.js"></script>
   <script src="/js/admin.js"></script>

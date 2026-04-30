@@ -3,15 +3,24 @@ const ALL_TABS = ['monitoring', 'users', 'tests', 'config', 'deploy'];
 document.addEventListener('DOMContentLoaded', async () => {
   const user = await API.requireAuth();
   if (!user) return;
-  if (!user.is_admin) {
+  if (user.role !== 'superadmin' && !user.is_admin) {
     window.location.href = '/dashboard';
     return;
   }
   setupNav(user);
 
+  const isSuperAdmin = user.role === 'superadmin';
+  _isSuperAdminView = isSuperAdmin;
+
+  // Hide config/deploy tabs for non-superadmin
+  if (!isSuperAdmin) {
+    document.querySelectorAll('.superadmin-only').forEach(el => el.classList.add('hidden'));
+  }
+
   // Tab switching
   document.querySelectorAll('.admin-tab').forEach(btn => {
     btn.addEventListener('click', () => {
+      if (btn.classList.contains('hidden')) return;
       document.querySelectorAll('.admin-tab').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       ALL_TABS.forEach(id => {
@@ -22,10 +31,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  await Promise.all([loadStats(), loadSyncLog(), loadConfig()]);
+  const initLoaders = [loadStats(), loadSyncLog()];
+  if (isSuperAdmin) initLoaders.push(loadConfig());
+  await Promise.all(initLoaders);
 
-  document.getElementById('config-form').addEventListener('submit', handleConfigSave);
-  document.getElementById('deploy-btn').addEventListener('click', handleDeploy);
+  if (isSuperAdmin) {
+    document.getElementById('config-form').addEventListener('submit', handleConfigSave);
+    document.getElementById('deploy-btn').addEventListener('click', handleDeploy);
+    document.getElementById('edit-modal-save').addEventListener('click', handleEditSave);
+    document.getElementById('edit-modal-close').addEventListener('click', closeEditModal);
+    document.getElementById('edit-modal-cancel').addEventListener('click', closeEditModal);
+  }
   document.getElementById('users-refresh-btn').addEventListener('click', loadUsers);
   document.getElementById('notif-test-btn').addEventListener('click', handleNotifTest);
   document.getElementById('sync-test-btn').addEventListener('click', handleSyncTest);
@@ -190,6 +206,8 @@ async function loadUsers() {
   renderUsersTable(users);
 }
 
+let _isSuperAdminView = false;
+
 function renderUsersTable(users) {
   const tbody = document.getElementById('users-tbody');
   if (users.length === 0) {
@@ -206,19 +224,33 @@ function renderUsersTable(users) {
       u.notify_email ? '✉️' : '<span style="color:var(--text-3)">✉</span>',
       u.notify_sms ? '📱' : '<span style="color:var(--text-3)">📵</span>',
     ].join(' ');
-    const adminBadge = u.is_admin ? '<span class="badge badge-primary" style="margin-left:.35rem">Admin</span>' : '';
+
+    let roleBadge, roleAction;
+    if (u.role === 'superadmin') {
+      roleBadge = '<span class="badge badge-warning">Superadmin</span>';
+      roleAction = '';
+    } else if (u.is_admin) {
+      roleBadge = '<span class="badge badge-primary">Admin</span>';
+      roleAction = `<button class="btn btn-sm btn-ghost" onclick="toggleAdmin(${u.id}, true)">Révoquer admin</button>`;
+    } else {
+      roleBadge = '<span style="color:var(--text-3);font-size:.85rem">Utilisateur</span>';
+      roleAction = `<button class="btn btn-sm btn-ghost" onclick="toggleAdmin(${u.id}, false)">Promouvoir admin</button>`;
+    }
+
+    const editBtn = _isSuperAdminView
+      ? `<button class="btn btn-sm btn-secondary" onclick="openEditModal(${u.id})" title="Modifier">✏️</button>`
+      : '';
+
     return `<tr>
-      <td style="font-size:.85rem">${escapeHtml(u.email)}${adminBadge}</td>
+      <td style="font-size:.85rem">${escapeHtml(u.email)}</td>
       <td style="font-size:.8rem;white-space:nowrap">${created}</td>
       <td style="font-size:.8rem;white-space:nowrap">${synced}</td>
       <td style="font-size:.8rem">${groups}</td>
       <td style="font-size:.85rem">${notif}</td>
-      <td>
-        <button class="btn btn-sm btn-ghost" onclick="toggleAdmin(${u.id}, ${u.is_admin})">
-          ${u.is_admin ? 'Révoquer admin' : 'Promouvoir admin'}
-        </button>
-      </td>
-      <td style="white-space:nowrap;display:flex;gap:.35rem;flex-wrap:wrap">
+      <td>${roleBadge}</td>
+      <td style="display:flex;gap:.35rem;flex-wrap:wrap">
+        ${editBtn}
+        ${roleAction}
         <button class="btn btn-sm btn-secondary" onclick="forceSync(${u.id})">Sync</button>
         <button class="btn btn-sm btn-secondary" onclick="resetPassword(${u.id})">Réinit. MDP</button>
         <button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id}, '${escapeHtml(u.email)}')">Supprimer</button>
@@ -259,7 +291,13 @@ async function resetPassword(userId) {
   const res = await API.request('POST', `/admin/users/${userId}/reset-password`, {});
   const data = res ? await res.json() : null;
   if (data && data.ok) {
-    showAlert(alertEl, `Mot de passe temporaire (affiché une seule fois) : ${data.temp_password}`, 'info');
+    const pwd = escapeHtml(data.temp_password);
+    const smsNote = data.sms_sent ? ' — SMS envoyé.' : '';
+    alertEl.className = 'alert alert-info';
+    alertEl.classList.remove('hidden');
+    alertEl.innerHTML = `Mot de passe temporaire (une seule fois)${smsNote} : <strong>${pwd}</strong> ` +
+      `<button onclick="navigator.clipboard.writeText('${pwd}').then(()=>this.textContent='✓')" ` +
+      `style="border:none;background:none;cursor:pointer;font-size:.95rem" title="Copier">📋</button>`;
   } else {
     showAlert(alertEl, data?.error || 'Erreur lors de la réinitialisation.');
   }
@@ -379,5 +417,62 @@ async function handlePortalTest() {
     const code = data?.code ? ` [${data.code}]` : '';
     showAlert(alertEl, msg + code);
     output.classList.add('hidden');
+  }
+}
+
+// ── MODAL ÉDITION UTILISATEUR ─────────────────────────────────────────────────
+
+function openEditModal(userId) {
+  const user = _usersCache.find(u => u.id === userId);
+  if (!user) return;
+
+  document.getElementById('edit-user-id').value = user.id;
+  document.getElementById('edit-email').value = user.email;
+  document.getElementById('edit-password').value = '';
+  document.getElementById('edit-phone').value = user.phone || '';
+  document.getElementById('edit-role').value = user.role || 'user';
+  document.getElementById('edit-portal-user').value = user.portal_username || '';
+  document.getElementById('edit-portal-pass').value = '';
+  document.getElementById('edit-notify-email').checked = !!user.notify_email;
+  document.getElementById('edit-notify-sms').checked = !!user.notify_sms;
+  hideAlert(document.getElementById('edit-modal-alert'));
+
+  document.getElementById('edit-user-modal').classList.remove('hidden');
+}
+
+function closeEditModal() {
+  document.getElementById('edit-user-modal').classList.add('hidden');
+}
+
+async function handleEditSave() {
+  const alertEl = document.getElementById('edit-modal-alert');
+  hideAlert(alertEl);
+  const userId = document.getElementById('edit-user-id').value;
+  const btn = document.getElementById('edit-modal-save');
+
+  const body = {
+    email: document.getElementById('edit-email').value.trim(),
+    phone: document.getElementById('edit-phone').value.trim() || null,
+    notify_email: document.getElementById('edit-notify-email').checked,
+    notify_sms: document.getElementById('edit-notify-sms').checked,
+    role: document.getElementById('edit-role').value,
+    portal_username: document.getElementById('edit-portal-user').value.trim() || null,
+  };
+  const pwd = document.getElementById('edit-password').value;
+  if (pwd) body.password = pwd;
+  const portalPwd = document.getElementById('edit-portal-pass').value;
+  if (portalPwd) body.portal_password = portalPwd;
+
+  setLoading(btn, true, 'Sauvegarde…');
+  const res = await API.request('PATCH', `/admin/users/${userId}`, body);
+  setLoading(btn, false);
+  const data = res ? await res.json() : null;
+
+  if (data && data.ok) {
+    closeEditModal();
+    showAlert(document.getElementById('users-alert'), 'Utilisateur mis à jour.', 'success');
+    loadUsers();
+  } else {
+    showAlert(alertEl, data?.error || 'Erreur lors de la sauvegarde.');
   }
 }

@@ -1,9 +1,10 @@
 const express = require('express');
 const { pool } = require('../db');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requireRegularUser } = require('../middleware/auth');
 
 const router = express.Router();
 router.use(requireAuth);
+router.use(requireRegularUser);
 
 // GET /api/groupes
 router.get('/', async (req, res) => {

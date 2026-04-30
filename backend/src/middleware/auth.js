@@ -13,11 +13,28 @@ function requireAuth(req, res, next) {
   }
 }
 
+// Allows superadmin OR group admin (is_admin = true)
 function requireAdmin(req, res, next) {
-  if (!req.user || !req.user.is_admin) {
+  if (!req.user || (req.user.role !== 'superadmin' && !req.user.is_admin)) {
     return res.status(403).json({ error: 'Accès réservé aux administrateurs' });
   }
   next();
 }
 
-module.exports = { requireAuth, requireAdmin };
+// Allows only superadmin (for sensitive config/deploy routes)
+function requireSuperAdmin(req, res, next) {
+  if (!req.user || req.user.role !== 'superadmin') {
+    return res.status(403).json({ error: 'Accès réservé aux administrateurs système' });
+  }
+  next();
+}
+
+function requireRegularUser(req, res, next) {
+  if (req.user && req.user.role === 'superadmin') {
+    return res.status(403).json({ error: 'Non disponible pour un compte superadmin' });
+  }
+  next();
+}
+
+module.exports = { requireAuth, requireAdmin, requireSuperAdmin, requireRegularUser };
+

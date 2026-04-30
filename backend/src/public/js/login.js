@@ -31,7 +31,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     API.setToken(data.token);
     API.setUser(data.user);
 
-    if (data.user.onboarding_completed) {
+    if (data.user.role === 'superadmin') {
+      window.location.href = '/admin';
+    } else if (data.user.onboarding_completed) {
       window.location.href = '/dashboard';
     } else {
       window.location.href = '/onboarding';
