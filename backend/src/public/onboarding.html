@@ -3,12 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Configuration — Notes Esther-Blondin</title>
+  <title>Configuration — NotesQC</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
   <div class="onboarding-wrap">
     <div class="onboarding-header">
+      <div class="onboarding-header-top">
+        <img src="/logo/notesQc_black.png" alt="NotesQC" class="onboarding-logo">
+        <button class="btn btn-ghost btn-sm" onclick="API.logout()">Se déconnecter</button>
+      </div>
       <h1>Configuration du compte</h1>
       <p>Quelques étapes pour accéder à votre tableau de bord</p>
     </div>
@@ -40,7 +44,7 @@
     <!-- Step 1 — Portal credentials -->
     <div class="onboarding-panel" id="step-1">
       <h2>Identifiants du portail</h2>
-      <p class="step-desc">Entrez vos identifiants du portail Esther-Blondin. Ils seront chiffrés et stockés de façon sécurisée.</p>
+      <p class="step-desc">Entrez vos identifiants du portail collégial. Ils seront chiffrés et stockés de façon sécurisée.</p>
       <div id="alert-1" class="alert alert-hidden"></div>
       <form id="form-1">
         <div class="form-group">

@@ -3,10 +3,8 @@ let currentYear = null;
 let gradeChart = null;
 let globalChart = null;
 let globalLineChart = null;
-let sparklineChart = null;
 let chartMode = 'moyenne'; // 'moyenne' | 'mediane'
 let currentChartData = null;
-let coursesData = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   const user = await API.requireOnboarded();
@@ -222,40 +220,6 @@ async function loadGlobalLineChart(courses) {
   });
 }
 
-function renderSparkline() {
-  const canvas = document.getElementById('sparkline');
-  if (!canvas) return;
-  if (sparklineChart) { sparklineChart.destroy(); sparklineChart = null; }
-  if (!coursesData || coursesData.length === 0) return;
-
-  const vals = coursesData.map(c => c.personal_avg ? parseFloat(c.personal_avg) : null);
-  sparklineChart = new Chart(canvas, {
-    type: 'line',
-    data: {
-      labels: coursesData.map(c => c.course_code),
-      datasets: [{
-        data: vals,
-        borderColor: 'rgba(147,197,253,0.8)',
-        backgroundColor: 'rgba(147,197,253,0.15)',
-        borderWidth: 1.5,
-        pointRadius: 2,
-        fill: true,
-        tension: .4,
-        spanGaps: true,
-      }],
-    },
-    options: {
-      responsive: false,
-      animation: false,
-      plugins: { legend: { display: false }, tooltip: { enabled: false } },
-      scales: {
-        x: { display: false },
-        y: { display: false, min: 0, max: 100 },
-      },
-    },
-  });
-}
-
 async function loadCourses() {
   const grid = document.getElementById('courses-grid');
   grid.innerHTML = '<div class="loading-overlay"><span class="spinner spinner-dark"></span></div>';
@@ -267,13 +231,8 @@ async function loadCourses() {
 
   if (!courses || courses.length === 0) {
     grid.innerHTML = '<div class="empty-state"><p>Aucun cours trouvé pour cette période.</p></div>';
-    coursesData = null;
-    renderSparkline();
     return;
   }
-
-  coursesData = courses;
-  renderSparkline();
 
   grid.innerHTML = courses.map(c => {
     const pAvg = c.personal_avg ? `${parseFloat(c.personal_avg).toFixed(1)}%` : '—';
@@ -411,10 +370,8 @@ function renderChart(data) {
 
   const isMoyenne = chartMode === 'moyenne';
 
-  // In cumulative-average mode, anchor the line at the origin (0%, 0%)
-  const origin = isMoyenne ? [{ x: 0, y: 0 }] : [];
-  const personalData = [...origin, ...pts.map(p => ({ x: p.cumulative_weight_pct, y: isMoyenne ? p.personal_running_avg : p.personal_pct }))];
-  const groupData    = [...origin, ...pts.map(p => ({ x: p.cumulative_weight_pct, y: isMoyenne ? p.group_running_avg    : p.group_median_pct }))];
+  const personalData = pts.map(p => ({ x: p.cumulative_weight_pct, y: isMoyenne ? p.personal_running_avg : p.personal_pct }));
+  const groupData    = pts.map(p => ({ x: p.cumulative_weight_pct, y: isMoyenne ? p.group_running_avg    : p.group_median_pct }));
 
   gradeChart = new Chart(canvas, {
     type: 'line',
@@ -454,9 +411,7 @@ function renderChart(data) {
           callbacks: {
             label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y !== null ? ctx.parsed.y.toFixed(1) + '%' : '—'}`,
             title: ctx => {
-              const idx = ctx[0].dataIndex - (isMoyenne ? 1 : 0);
-              if (idx < 0) return 'Début';
-              const p = pts[idx];
+              const p = pts[ctx[0].dataIndex];
               return `${p.title} (${p.cumulative_weight_pct}% de la note finale)`;
             },
           },

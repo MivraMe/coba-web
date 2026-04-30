@@ -29,7 +29,7 @@ async function sendNewGradeEmail(to, subject, { courseCode, courseName, assignme
       ${assignment.category ? `<p><strong>Catégorie :</strong> ${assignment.category}</p>` : ''}
       <p><strong>Note :</strong> ${score.score_obtained} / ${score.score_max} (${score.percentage} %)</p>
       <p style="color:#64748b;font-size:0.875rem;margin-top:2rem">
-        Vous recevez ce courriel car vous avez activé les notifications pour l'application Notes Esther-Blondin.
+        Vous recevez ce courriel car vous avez activé les notifications pour l'application NotesQC.
       </p>
     </div>
   `;

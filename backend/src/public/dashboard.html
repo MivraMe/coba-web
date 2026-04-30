@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tableau de bord — Notes Esther-Blondin</title>
+  <title>Tableau de bord — NotesQC</title>
   <link rel="stylesheet" href="/css/style.css">
   <style>
     .global-header {
@@ -47,7 +47,7 @@
 </head>
 <body>
   <nav class="nav" id="main-nav">
-    <a class="nav-brand" href="/dashboard">Notes EB</a>
+    <a class="nav-brand" href="/dashboard"><img src="/logo/notesQC_white.png" alt="NotesQC" class="nav-logo"></a>
     <div class="nav-links">
       <a href="/dashboard" class="nav-link">Tableau de bord</a>
       <a href="/groupes" class="nav-link">Groupes</a>
@@ -71,11 +71,8 @@
             Synchroniser
           </button>
         </div>
-        <div style="display:flex;align-items:center;gap:1.5rem">
-          <div id="global-stats-row" class="global-stats-row" style="flex:1">
-            <div style="opacity:.6;font-size:.9rem">Chargement…</div>
-          </div>
-          <canvas id="sparkline" width="160" height="60" style="flex-shrink:0;opacity:.85"></canvas>
+        <div id="global-stats-row" class="global-stats-row">
+          <div style="opacity:.6;font-size:.9rem">Chargement…</div>
         </div>
         <button class="global-expand-btn" id="global-expand-btn">▼ Afficher plus</button>
         <div class="global-expanded hidden" id="global-expanded">
