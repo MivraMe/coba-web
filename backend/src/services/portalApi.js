@@ -99,12 +99,20 @@ function getSchoolYear(date) {
   return month >= 8 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
 }
 
+function pickDateForSchoolYear(dateAssigned, dateDue) {
+  const MIN_YEAR = 2025;
+  if (dateAssigned && dateAssigned.getFullYear() >= MIN_YEAR) return dateAssigned;
+  if (dateDue && dateDue.getFullYear() >= MIN_YEAR) return dateDue;
+  // Both absent or aberrant — fall back to server date
+  return new Date();
+}
+
 function parseAssignment(raw) {
   const { course_code, course_name } = parseCourse(raw.course);
   const dateAssigned = parsePortalDate(raw.date_assigned);
   const dateDue = parsePortalDate(raw.date_due);
   const dateCompleted = raw.date_completed ? parsePortalDate(raw.date_completed) : null;
-  const schoolYear = getSchoolYear(dateAssigned);
+  const schoolYear = getSchoolYear(pickDateForSchoolYear(dateAssigned, dateDue));
   const { score_obtained, score_max, percentage } = parseResult(raw.result);
 
   return {
