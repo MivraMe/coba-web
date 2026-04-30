@@ -89,4 +89,30 @@ async function sendAdminMessage(to, subject, body) {
   if (error) throw new Error(`Resend erreur: ${error.message}`);
 }
 
-module.exports = { sendNewGradeEmail, sendInvitationEmail, sendAdminMessage };
+async function sendPasswordResetEmail(to, code) {
+  const client = getClient();
+  if (!client) throw new Error('RESEND_API_KEY non configuré');
+
+  const html = `
+    <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+      <h2 style="color:#1e40af">Réinitialisation de mot de passe</h2>
+      <p>Votre code de réinitialisation est :</p>
+      <p style="font-size:2rem;font-weight:700;letter-spacing:.3rem;color:#1e40af;margin:1.5rem 0">${code}</p>
+      <p>Ce code est valide pendant <strong>15 minutes</strong>.</p>
+      <p style="color:#64748b;font-size:0.875rem;margin-top:2rem">
+        Si vous n'avez pas demandé cette réinitialisation, ignorez ce message.
+      </p>
+    </div>
+  `;
+
+  const { error } = await client.emails.send({
+    from: process.env.SMTP_FROM || 'NotesQC <noreply@notesqc.ca>',
+    to,
+    subject: 'Code de réinitialisation — NotesQC',
+    html,
+  });
+
+  if (error) throw new Error(`Resend erreur: ${error.message}`);
+}
+
+module.exports = { sendNewGradeEmail, sendInvitationEmail, sendAdminMessage, sendPasswordResetEmail };

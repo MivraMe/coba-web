@@ -133,6 +133,18 @@ ALTER TABLE user_invitations ALTER COLUMN expires_at DROP NOT NULL;
 ALTER TABLE user_invitations ADD COLUMN IF NOT EXISTS use_count INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE user_invitations ADD COLUMN IF NOT EXISTS max_uses INTEGER;
 
+-- Tokens de réinitialisation de mot de passe
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  code CHAR(6) NOT NULL,
+  channel VARCHAR(10) NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user ON password_reset_tokens(user_id);
+
 -- TODO items
 CREATE TABLE IF NOT EXISTS todo_items (
   id SERIAL PRIMARY KEY,
