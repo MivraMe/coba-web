@@ -83,7 +83,7 @@ async function processAssignments(userId, rawAssignments) {
           );
           const hasNewGrade =
             existing.rows.length === 0 ||
-            parseFloat(existing.rows[0].percentage) !== a.percentage;
+            parseFloat(existing.rows[0].percentage).toFixed(2) !== Number(a.percentage).toFixed(2);
 
           await client.query(
             `INSERT INTO user_scores (assignment_id, user_id, score_obtained, score_max, percentage, refreshed_at)
@@ -175,8 +175,20 @@ async function runScheduledRefresh() {
           [group.id]
         );
         for (const member of members) {
-          for (const gradeInfo of newGrades) {
-            await sendNotifications(member, gradeInfo).catch(err =>
+          for (const { assignment, group: gradeGroup, score: detectedScore } of newGrades) {
+            const { rows: scoreRows } = await pool.query(
+              'SELECT score_obtained, score_max, percentage FROM user_scores WHERE assignment_id = $1 AND user_id = $2',
+              [assignment.id, member.id]
+            );
+            const memberScore =
+              scoreRows.length > 0 && scoreRows[0].percentage !== null
+                ? {
+                    score_obtained: parseFloat(scoreRows[0].score_obtained),
+                    score_max: parseFloat(scoreRows[0].score_max),
+                    percentage: parseFloat(scoreRows[0].percentage),
+                  }
+                : detectedScore;
+            await sendNotifications(member, { assignment, group: gradeGroup, score: memberScore }).catch(err =>
               console.error('Erreur notification:', err.message)
             );
           }
