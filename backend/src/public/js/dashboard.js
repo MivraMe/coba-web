@@ -380,12 +380,19 @@ function renderChart(data) {
 
   const isMoyenne = chartMode === 'moyenne';
 
-  const firstPersonal = isMoyenne ? pts[0].personal_running_avg : pts[0].personal_pct;
-  const firstGroup    = isMoyenne ? pts[0].group_running_avg    : pts[0].group_median_pct;
-  const origin = (x0, y0) => (y0 !== null ? [{ x: 0, y: y0 }] : []);
+  // Build datasets with an explicit origin at x=0 using the first note's value
+  const yPersonal0 = isMoyenne ? pts[0].personal_running_avg : pts[0].personal_pct;
+  const yGroup0    = isMoyenne ? pts[0].group_running_avg    : pts[0].group_median_pct;
 
-  const personalData = [...origin(0, firstPersonal), ...pts.map(p => ({ x: p.cumulative_weight_pct, y: isMoyenne ? p.personal_running_avg : p.personal_pct }))];
-  const groupData    = [...origin(0, firstGroup),    ...pts.map(p => ({ x: p.cumulative_weight_pct, y: isMoyenne ? p.group_running_avg    : p.group_median_pct }))];
+  // Index 0 is the synthetic origin; real pts start at index 1
+  const personalData = [
+    { x: 0, y: yPersonal0 ?? null },
+    ...pts.map(p => ({ x: p.cumulative_weight_pct, y: isMoyenne ? p.personal_running_avg : p.personal_pct })),
+  ];
+  const groupData = [
+    { x: 0, y: yGroup0 ?? null },
+    ...pts.map(p => ({ x: p.cumulative_weight_pct, y: isMoyenne ? p.group_running_avg : p.group_median_pct })),
+  ];
 
   gradeChart = new Chart(canvas, {
     type: 'line',
@@ -397,8 +404,8 @@ function renderChart(data) {
           borderColor: '#1e40af',
           backgroundColor: 'rgba(30,64,175,.08)',
           tension: isMoyenne ? .35 : 0,
-          pointRadius: 4,
-          pointHoverRadius: 6,
+          pointRadius: (ctx) => ctx.dataIndex === 0 ? 0 : 4,
+          pointHoverRadius: (ctx) => ctx.dataIndex === 0 ? 0 : 6,
           fill: false,
           spanGaps: true,
         },
@@ -408,8 +415,8 @@ function renderChart(data) {
           borderColor: isMoyenne ? '#059669' : '#d97706',
           backgroundColor: isMoyenne ? 'rgba(5,150,105,.08)' : 'rgba(217,119,6,.08)',
           tension: isMoyenne ? .35 : 0,
-          pointRadius: 4,
-          pointHoverRadius: 6,
+          pointRadius: (ctx) => ctx.dataIndex === 0 ? 0 : 4,
+          pointHoverRadius: (ctx) => ctx.dataIndex === 0 ? 0 : 6,
           fill: false,
           borderDash: [5, 3],
           spanGaps: true,
@@ -422,10 +429,12 @@ function renderChart(data) {
       plugins: {
         legend: { position: 'top' },
         tooltip: {
+          filter: (item) => item.dataIndex > 0,
           callbacks: {
             label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y !== null ? ctx.parsed.y.toFixed(1) + '%' : '—'}`,
             title: ctx => {
-              const p = pts[ctx[0].dataIndex];
+              const p = pts[ctx[0].dataIndex - 1]; // offset: index 0 is synthetic origin
+              if (!p) return '';
               return `${p.title} (${p.cumulative_weight_pct}% de la note finale)`;
             },
           },
