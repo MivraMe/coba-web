@@ -81,32 +81,24 @@ a:hover { text-decoration: underline; }
 }
 .nav-logout:hover { background: rgba(255,255,255,.25); }
 .nav-logout-link {
-  display: none;
   background: none; border: none; cursor: pointer;
-  color: rgba(255,255,255,.8); font-size: .9rem;
+  color: rgba(255,255,255,.8); font-size: 1rem;
   padding: .65rem 1rem; border-radius: var(--radius-sm);
   text-align: left; width: 100%;
   transition: background .15s, color .15s;
   margin-top: .25rem;
-  border-top: 1px solid rgba(255,255,255,.15);
+  border-top: 1px solid rgba(255,255,255,.2);
 }
 .nav-logout-link:hover { background: rgba(255,255,255,.15); color: #fff; }
-.nav-hamburger {
-  display: flex;
-  flex-direction: column; justify-content: center; align-items: center;
-  gap: 5px;
+
+/* Burger button — hidden on desktop, shown on mobile via media query */
+.burger-menu {
+  display: none;
+  flex-direction: column; gap: 5px;
   background: none; border: none; cursor: pointer;
-  padding: .35rem;
-  border-radius: var(--radius-sm);
+  padding: .35rem; color: #fff;
 }
-.nav-hamburger span {
-  display: block; width: 22px; height: 2px;
-  background: #fff; border-radius: 2px;
-  transition: transform .2s, opacity .2s;
-}
-.nav.nav-open .nav-hamburger span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
-.nav.nav-open .nav-hamburger span:nth-child(2) { opacity: 0; }
-.nav.nav-open .nav-hamburger span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+.burger-menu span { display: block; width: 25px; height: 3px; background: currentColor; border-radius: 2px; }
 
 /* ── LAYOUT ── */
 .page { padding-top: calc(var(--nav-h) + 1.5rem); }
@@ -570,7 +562,10 @@ tr:hover td { background: var(--bg); }
   .nav { padding: 0 1rem; }
   .nav-email { display: none; }
 
-  /* Mobile dropdown: hidden by default, shown when .nav-open */
+  /* Burger button visible on mobile */
+  .burger-menu { display: flex; }
+
+  /* Nav links hidden by default, shown when .open is toggled */
   .nav-links {
     display: none;
     position: absolute;
@@ -583,7 +578,7 @@ tr:hover td { background: var(--bg); }
     box-shadow: 0 6px 20px rgba(0,0,0,.25);
     z-index: 99;
   }
-  .nav.nav-open .nav-links { display: flex; }
+  .nav-links.open { display: flex; }
   .nav-link { padding: .65rem 1rem; font-size: 1rem; }
 
   .page { padding-top: calc(var(--nav-h) + 1rem); }

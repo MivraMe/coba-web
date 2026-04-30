@@ -150,23 +150,16 @@ function setupNav(user) {
     if (a.getAttribute('href') === path) a.classList.add('active');
   });
 
-  // JS-driven mobile/desktop mode — more reliable than CSS-only
-  const hamburger = nav.querySelector('.nav-hamburger');
-  const desktopLogout = nav.querySelector('.nav-logout');
-  const mq = window.matchMedia('(max-width: 768px)');
-
-  function applyMode(mobile) {
-    hamburger.style.display = mobile ? 'flex' : 'none';
-    desktopLogout.style.display = mobile ? 'none' : '';
+  // Burger menu toggle
+  const burgerBtn = document.getElementById('burgerBtn');
+  const navLinks = nav.querySelector('.nav-links');
+  if (burgerBtn) {
+    burgerBtn.addEventListener('click', () => {
+      navLinks.classList.toggle('open');
+    });
+    document.addEventListener('click', (e) => {
+      if (!nav.contains(e.target)) navLinks.classList.remove('open');
+    });
+    navLinks.addEventListener('click', () => navLinks.classList.remove('open'));
   }
-  applyMode(mq.matches);
-  mq.addEventListener('change', e => applyMode(e.matches));
-
-  // Hamburger toggle
-  hamburger.addEventListener('click', (e) => {
-    e.stopPropagation();
-    nav.classList.toggle('nav-open');
-  });
-  document.addEventListener('click', () => nav.classList.remove('nav-open'));
-  nav.querySelector('.nav-links').addEventListener('click', () => nav.classList.remove('nav-open'));
 }
