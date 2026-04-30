@@ -38,7 +38,7 @@ a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
 /* ── NAV ── */
-.main-nav {
+.nav, .main-nav {
   position: fixed; top: 0; left: 0; right: 0;
   height: 64px;
   background: linear-gradient(90deg, #1e3a8a 0%, #1e40af 100%);
@@ -594,7 +594,7 @@ tr:hover td { background: var(--bg); }
 
 /* ── RESPONSIVE ── */
 @media (max-width: 768px) {
-  .main-nav { padding: 0 1rem; }
+  .nav, .main-nav { padding: 0 1rem; }
   .burger-btn { display: flex; }
   .nav-sep { display: none; }
   .nav-email { display: none; }
