@@ -37,6 +37,7 @@ services:
       NODE_ENV: ${NODE_ENV:-production}
       REFRESH_INTERVAL_MINUTES: ${REFRESH_INTERVAL_MINUTES:-5}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
     volumes:
       # Required for the admin deploy endpoint (docker-in-docker)
       - /var/run/docker.sock:/var/run/docker.sock

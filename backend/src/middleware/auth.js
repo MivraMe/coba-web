@@ -20,4 +20,11 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-module.exports = { requireAuth, requireAdmin };
+function requireRegularUser(req, res, next) {
+  if (req.user && req.user.role === 'superadmin') {
+    return res.status(403).json({ error: 'Non disponible pour un compte superadmin' });
+  }
+  next();
+}
+
+module.exports = { requireAuth, requireAdmin, requireRegularUser };

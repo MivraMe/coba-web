@@ -1,12 +1,13 @@
 const express = require('express');
 const { pool } = require('../db');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requireRegularUser } = require('../middleware/auth');
 const { encrypt } = require('../services/crypto');
 const { fetchNotes, parseAssignment, getCanonicalSchoolYear } = require('../services/portalApi');
 const { processAssignments } = require('../services/dataSync');
 
 const router = express.Router();
 router.use(requireAuth);
+router.use(requireRegularUser);
 
 // GET /api/onboarding/status
 router.get('/status', async (req, res) => {

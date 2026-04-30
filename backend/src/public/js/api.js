@@ -51,6 +51,10 @@ const API = (() => {
   async function requireOnboarded() {
     const user = await requireAuth();
     if (!user) return null;
+    if (user.role === 'superadmin') {
+      window.location.href = '/admin';
+      return null;
+    }
     if (!user.onboarding_completed) {
       window.location.href = '/onboarding';
       return null;

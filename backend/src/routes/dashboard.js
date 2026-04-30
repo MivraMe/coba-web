@@ -1,10 +1,11 @@
 const express = require('express');
 const { pool } = require('../db');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requireRegularUser } = require('../middleware/auth');
 const { syncUserData } = require('../services/dataSync');
 
 const router = express.Router();
 router.use(requireAuth);
+router.use(requireRegularUser);
 
 // GET /api/dashboard/annees
 router.get('/annees', async (req, res) => {
