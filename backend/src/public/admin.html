@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Administration — NotesQC</title>
   <link rel="stylesheet" href="/css/style.css">
+  <script>(function(){var t=localStorage.getItem('coba_theme');if(t==='dark')document.documentElement.classList.add('dark');})()</script>
 </head>
 <body>
   <nav class="nav" id="main-nav">
@@ -18,6 +19,7 @@
     </div>
     <div class="nav-right">
       <span class="nav-email" id="navEmail"></span>
+      <button class="theme-btn" id="themeBtnNav" title="Basculer le thème" aria-label="Basculer le thème sombre/clair"><span data-theme-icon></span></button>
       <button class="nav-logout" id="navLogout">Déconnexion</button>
     </div>
   </nav>
@@ -34,6 +36,7 @@
         <button class="admin-tab" data-tab="tests">Tests</button>
         <button class="admin-tab superadmin-only" data-tab="config">Configuration</button>
         <button class="admin-tab superadmin-only" data-tab="deploy">Mise à jour</button>
+        <button class="admin-tab superadmin-only" data-tab="todo">TODO</button>
       </div>
 
       <!-- ── MONITORING ── -->
@@ -215,6 +218,25 @@
         </div>
       </div>
 
+      <!-- ── TODO ── -->
+      <div id="tab-todo" class="hidden">
+        <div class="admin-section">
+          <div class="flex-between mb-1">
+            <h3 style="margin-bottom:0">Fonctionnalités planifiées</h3>
+            <button class="btn btn-sm btn-primary superadmin-only" id="todo-add-btn">+ Ajouter</button>
+          </div>
+          <p style="font-size:.875rem;color:var(--text-2);margin-bottom:1rem">Liste des fonctionnalités en cours de planification pour NotesQC.</p>
+          <div style="display:flex;gap:.35rem;flex-wrap:wrap;margin-bottom:1.25rem">
+            <button class="year-btn active" data-todo-filter="all">Tous</button>
+            <button class="year-btn" data-todo-filter="Planifié">Planifié</button>
+            <button class="year-btn" data-todo-filter="En cours">En cours</button>
+            <button class="year-btn" data-todo-filter="Complété">Complété</button>
+            <button class="year-btn" data-todo-filter="Annulé">Annulé</button>
+          </div>
+          <div class="todo-grid" id="todo-grid"><div style="color:var(--text-3);padding:.5rem">Chargement…</div></div>
+        </div>
+      </div>
+
       <!-- ── DEPLOY ── -->
       <div id="tab-deploy" class="hidden">
         <div class="admin-section">
@@ -306,8 +328,84 @@
     </div>
   </div>
 
+  <!-- ── MODAL TODO ── -->
+  <div id="todo-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="todo-modal-heading">Nouvel élément</h3>
+        <button class="modal-close-btn" id="todo-modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="todo-modal-alert" class="alert alert-hidden mb-1"></div>
+        <input type="hidden" id="todo-modal-id">
+        <div class="form-group">
+          <label class="form-label">Titre</label>
+          <input type="text" class="form-control" id="todo-modal-title-input" placeholder="Titre de la fonctionnalité">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea class="form-control" id="todo-modal-desc" rows="3" placeholder="Description…"></textarea>
+        </div>
+        <div class="config-grid">
+          <div class="form-group">
+            <label class="form-label">Statut</label>
+            <select class="form-control" id="todo-modal-status">
+              <option>Planifié</option>
+              <option>En cours</option>
+              <option>Complété</option>
+              <option>Annulé</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Priorité</label>
+            <select class="form-control" id="todo-modal-priority">
+              <option>Basse</option>
+              <option>Normale</option>
+              <option>Haute</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="todo-modal-cancel">Annuler</button>
+        <button class="btn btn-primary" id="todo-modal-save">Sauvegarder</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MODAL CONTACTER UTILISATEUR ── -->
+  <div id="contact-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Contacter l'utilisateur</h3>
+        <button class="modal-close-btn" id="contact-modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="contact-modal-alert" class="alert alert-hidden mb-1"></div>
+        <p class="text-sm text-muted mb-1" style="margin-bottom:.75rem">Destinataire : <strong id="contact-modal-email"></strong></p>
+        <div class="form-group">
+          <label class="form-label">Canal</label>
+          <select class="form-control" id="contact-modal-channel">
+            <option value="email">Courriel</option>
+            <option value="sms">SMS</option>
+            <option value="both">Les deux</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Message</label>
+          <textarea class="form-control" id="contact-modal-msg" rows="4" placeholder="Votre message…"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="contact-modal-cancel">Annuler</button>
+        <button class="btn btn-primary" id="contact-modal-send">Envoyer</button>
+      </div>
+    </div>
+  </div>
+
   <script src="/js/api.js"></script>
   <script src="/js/admin.js"></script>
+  <script src="/js/theme.js"></script>
   <script src="/js/cookie-banner.js"></script>
 </body>
 </html>

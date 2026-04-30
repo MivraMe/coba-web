@@ -108,3 +108,16 @@ CREATE INDEX IF NOT EXISTS idx_notif_log_sent ON notification_log(type, sent_at)
 
 -- Superadmin role (idempotent migration)
 ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'user';
+
+-- TODO items
+CREATE TABLE IF NOT EXISTS todo_items (
+  id SERIAL PRIMARY KEY,
+  title VARCHAR(255) NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  status VARCHAR(20) NOT NULL DEFAULT 'Planifié',
+  priority VARCHAR(10) NOT NULL DEFAULT 'Normale',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT todo_items_title_key UNIQUE (title)
+);
+

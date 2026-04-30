@@ -36,4 +36,20 @@ async function sendNewGradeEmail(to, subject, { courseCode, courseName, assignme
   if (error) throw new Error(`Resend erreur: ${error.message}`);
 }
 
-module.exports = { sendNewGradeEmail };
+async function sendAdminMessage(to, subject, body) {
+  const client = getClient();
+  if (!client) throw new Error('RESEND_API_KEY non configuré');
+  const html = `<div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+    <p style="font-size:15px">${body.replace(/\n/g, '<br>')}</p>
+    <p style="color:#64748b;font-size:0.875rem;margin-top:2rem">
+      Message envoyé depuis le panneau d'administration NotesQC.
+    </p>
+  </div>`;
+  const { error } = await client.emails.send({
+    from: process.env.SMTP_FROM || 'NotesQC <noreply@notesqc.ca>',
+    to, subject, html, text: body,
+  });
+  if (error) throw new Error(`Resend erreur: ${error.message}`);
+}
+
+module.exports = { sendNewGradeEmail, sendAdminMessage };

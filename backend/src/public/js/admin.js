@@ -1,4 +1,4 @@
-const ALL_TABS = ['monitoring', 'users', 'tests', 'config', 'deploy'];
+const ALL_TABS = ['monitoring', 'users', 'tests', 'config', 'deploy', 'todo'];
 
 document.addEventListener('DOMContentLoaded', async () => {
   const user = await API.requireAuth();
@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const isSuperAdmin = user.role === 'superadmin';
   _isSuperAdminView = isSuperAdmin;
 
-  // Hide config/deploy tabs for non-superadmin
+  // Hide config/deploy/todo-add tabs for non-superadmin
   if (!isSuperAdmin) {
     document.querySelectorAll('.superadmin-only').forEach(el => el.classList.add('hidden'));
   }
@@ -28,11 +28,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
       if (btn.dataset.tab === 'users') loadUsers();
       if (btn.dataset.tab === 'tests') loadTestsTab();
+      if (btn.dataset.tab === 'todo') loadTodo();
     });
   });
 
   const initLoaders = [loadStats(), loadSyncLog()];
-  if (isSuperAdmin) initLoaders.push(loadConfig());
+  if (isSuperAdmin) initLoaders.push(loadConfig(), loadTodo());
   await Promise.all(initLoaders);
 
   if (isSuperAdmin) {
@@ -41,11 +42,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('edit-modal-save').addEventListener('click', handleEditSave);
     document.getElementById('edit-modal-close').addEventListener('click', closeEditModal);
     document.getElementById('edit-modal-cancel').addEventListener('click', closeEditModal);
+    document.getElementById('todo-add-btn').addEventListener('click', () => openTodoModal(null));
+    document.getElementById('todo-modal-save').addEventListener('click', handleTodoSave);
+    document.getElementById('todo-modal-close').addEventListener('click', closeTodoModal);
+    document.getElementById('todo-modal-cancel').addEventListener('click', closeTodoModal);
   }
   document.getElementById('users-refresh-btn').addEventListener('click', loadUsers);
   document.getElementById('notif-test-btn').addEventListener('click', handleNotifTest);
   document.getElementById('sync-test-btn').addEventListener('click', handleSyncTest);
   document.getElementById('portal-test-btn').addEventListener('click', handlePortalTest);
+
+  // TODO filter buttons (visible to all admins)
+  document.querySelectorAll('[data-todo-filter]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-todo-filter]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      _todoFilter = btn.dataset.todoFilter;
+      renderTodoGrid();
+    });
+  });
+
+  // Contact modal (visible to all admins)
+  document.getElementById('contact-modal-send').addEventListener('click', handleContactSend);
+  document.getElementById('contact-modal-close').addEventListener('click', closeContactModal);
+  document.getElementById('contact-modal-cancel').addEventListener('click', closeContactModal);
 });
 
 // ── MONITORING ────────────────────────────────────────────────────────────────
@@ -216,9 +236,13 @@ function renderUsersTable(users) {
   }
   tbody.innerHTML = users.map(u => {
     const created = new Date(u.created_at).toLocaleDateString('fr-CA');
-    const synced = u.last_synced ? new Date(u.last_synced).toLocaleString('fr-CA') : '—';
+    const synced = u.last_synced
+      ? `<span style="display:block;color:var(--text-3);font-size:.75rem">Dernière synchro</span>${new Date(u.last_synced).toLocaleString('fr-CA', { dateStyle: 'short', timeStyle: 'short' })}`
+      : '—';
     const groups = u.groups.length > 0
-      ? u.groups.map(g => `<span class="badge badge-neutral" style="margin:.1rem">${escapeHtml(g.course_code)}</span>`).join(' ')
+      ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:.2rem">${
+          u.groups.map(g => `<span class="badge badge-neutral" title="${escapeHtml(g.course_name)}">${escapeHtml(g.course_code)}</span>`).join('')
+        }</div>`
       : '<span style="color:var(--text-3)">—</span>';
     const notif = [
       u.notify_email ? '✉️' : '<span style="color:var(--text-3)">✉</span>',
@@ -241,19 +265,29 @@ function renderUsersTable(users) {
       ? `<button class="btn btn-sm btn-secondary" onclick="openEditModal(${u.id})" title="Modifier">✏️</button>`
       : '';
 
+    // Admin de groupe viewing superadmin: only show "Contacter"
+    let actionsHtml;
+    if (!_isSuperAdminView && u.role === 'superadmin') {
+      actionsHtml = `<button class="btn btn-sm btn-ghost" onclick="openContactModal(${u.id}, '${escapeHtml(u.email)}')">Contacter</button>`;
+    } else {
+      actionsHtml = `
+        ${editBtn}
+        ${roleAction}
+        <button class="btn btn-sm btn-secondary" onclick="forceSync(${u.id})">Sync</button>
+        ${u.role !== 'superadmin' ? `<button class="btn btn-sm btn-secondary" onclick="resetPassword(${u.id})">Réinit. MDP</button>` : ''}
+        ${u.role !== 'superadmin' ? `<button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id}, '${escapeHtml(u.email)}')">Supprimer</button>` : ''}
+      `;
+    }
+
     return `<tr>
       <td style="font-size:.85rem">${escapeHtml(u.email)}</td>
       <td style="font-size:.8rem;white-space:nowrap">${created}</td>
-      <td style="font-size:.8rem;white-space:nowrap">${synced}</td>
+      <td style="font-size:.8rem">${synced}</td>
       <td style="font-size:.8rem">${groups}</td>
       <td style="font-size:.85rem">${notif}</td>
       <td>${roleBadge}</td>
       <td style="display:flex;gap:.35rem;flex-wrap:wrap">
-        ${editBtn}
-        ${roleAction}
-        <button class="btn btn-sm btn-secondary" onclick="forceSync(${u.id})">Sync</button>
-        <button class="btn btn-sm btn-secondary" onclick="resetPassword(${u.id})">Réinit. MDP</button>
-        <button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id}, '${escapeHtml(u.email)}')">Supprimer</button>
+        ${actionsHtml}
       </td>
     </tr>`;
   }).join('');
@@ -475,4 +509,135 @@ async function handleEditSave() {
   } else {
     showAlert(alertEl, data?.error || 'Erreur lors de la sauvegarde.');
   }
+}
+
+// ── MODAL CONTACTER ───────────────────────────────────────────────────────────
+
+let _contactTargetId = null;
+
+function openContactModal(userId, email) {
+  _contactTargetId = userId;
+  document.getElementById('contact-modal-email').textContent = email;
+  document.getElementById('contact-modal-msg').value = '';
+  document.getElementById('contact-modal-channel').value = 'email';
+  hideAlert(document.getElementById('contact-modal-alert'));
+  document.getElementById('contact-modal').classList.remove('hidden');
+}
+
+function closeContactModal() {
+  document.getElementById('contact-modal').classList.add('hidden');
+}
+
+async function handleContactSend() {
+  const alertEl = document.getElementById('contact-modal-alert');
+  hideAlert(alertEl);
+  const message = document.getElementById('contact-modal-msg').value.trim();
+  const channel = document.getElementById('contact-modal-channel').value;
+  if (!message) { showAlert(alertEl, 'Le message est requis.'); return; }
+  const btn = document.getElementById('contact-modal-send');
+  setLoading(btn, true, 'Envoi…');
+  const res = await API.request('POST', `/admin/users/${_contactTargetId}/contact`, { message, channel });
+  setLoading(btn, false);
+  const data = res ? await res.json() : null;
+  if (data && data.ok) {
+    const parts = [];
+    if (data.results.email !== undefined) parts.push(`Courriel : ${data.results.email === 'ok' ? '✓' : '✗ ' + data.results.email}`);
+    if (data.results.sms !== undefined) parts.push(`SMS : ${data.results.sms === 'ok' ? '✓' : '✗ ' + data.results.sms}`);
+    showAlert(alertEl, parts.join(' | ') || 'Envoyé.', 'success');
+  } else {
+    showAlert(alertEl, data?.error || 'Erreur lors de l\'envoi.');
+  }
+}
+
+// ── TODO ──────────────────────────────────────────────────────────────────────
+
+let _todoItems = [];
+let _todoFilter = 'all';
+
+async function loadTodo() {
+  const grid = document.getElementById('todo-grid');
+  if (!grid) return;
+  grid.innerHTML = '<div style="color:var(--text-3);padding:.5rem">Chargement…</div>';
+  const items = await API.get('/admin/todo');
+  if (!items) return;
+  _todoItems = items;
+  renderTodoGrid();
+}
+
+function renderTodoGrid() {
+  const grid = document.getElementById('todo-grid');
+  if (!grid) return;
+  const filtered = _todoFilter === 'all'
+    ? _todoItems
+    : _todoItems.filter(i => i.status === _todoFilter);
+  if (filtered.length === 0) {
+    grid.innerHTML = '<div style="color:var(--text-3);padding:.5rem">Aucun élément.</div>';
+    return;
+  }
+  const badgeClass = { 'Planifié': 'badge-neutral', 'En cours': 'badge-primary', 'Complété': 'badge-success', 'Annulé': 'badge-danger' };
+  const priorityColor = { 'Haute': 'var(--danger)', 'Normale': 'var(--text-2)', 'Basse': 'var(--text-3)' };
+  grid.innerHTML = filtered.map(item => {
+    const bc = badgeClass[item.status] || 'badge-neutral';
+    const pc = priorityColor[item.priority] || 'var(--text-2)';
+    const actions = _isSuperAdminView ? `
+      <div style="display:flex;gap:.4rem;margin-top:.25rem">
+        <button class="btn btn-sm btn-secondary" onclick="openTodoModal(${item.id})" title="Modifier">✏️</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteTodoItem(${item.id})" title="Supprimer">🗑️</button>
+      </div>` : '';
+    return `<div class="todo-card">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:.5rem">
+        <div class="todo-card-title">${escapeHtml(item.title)}</div>
+        <span style="font-size:.7rem;color:${pc};white-space:nowrap;font-weight:600;flex-shrink:0">${escapeHtml(item.priority)}</span>
+      </div>
+      <span class="badge ${bc}">${escapeHtml(item.status)}</span>
+      <div class="todo-card-desc">${escapeHtml(item.description)}</div>
+      ${actions}
+    </div>`;
+  }).join('');
+}
+
+function openTodoModal(id) {
+  const item = id ? _todoItems.find(i => i.id === id) : null;
+  document.getElementById('todo-modal-id').value = id || '';
+  document.getElementById('todo-modal-title-input').value = item ? item.title : '';
+  document.getElementById('todo-modal-desc').value = item ? item.description : '';
+  document.getElementById('todo-modal-status').value = item ? item.status : 'Planifié';
+  document.getElementById('todo-modal-priority').value = item ? item.priority : 'Normale';
+  document.getElementById('todo-modal-heading').textContent = id ? 'Modifier l\'élément' : 'Nouvel élément';
+  hideAlert(document.getElementById('todo-modal-alert'));
+  document.getElementById('todo-modal').classList.remove('hidden');
+}
+
+function closeTodoModal() {
+  document.getElementById('todo-modal').classList.add('hidden');
+}
+
+async function handleTodoSave() {
+  const alertEl = document.getElementById('todo-modal-alert');
+  hideAlert(alertEl);
+  const id = document.getElementById('todo-modal-id').value;
+  const body = {
+    title: document.getElementById('todo-modal-title-input').value.trim(),
+    description: document.getElementById('todo-modal-desc').value.trim(),
+    status: document.getElementById('todo-modal-status').value,
+    priority: document.getElementById('todo-modal-priority').value,
+  };
+  if (!body.title) { showAlert(alertEl, 'Le titre est requis.'); return; }
+  const btn = document.getElementById('todo-modal-save');
+  setLoading(btn, true, 'Sauvegarde…');
+  const res = id
+    ? await API.request('PATCH', `/admin/todo/${id}`, body)
+    : await API.request('POST', '/admin/todo', body);
+  setLoading(btn, false);
+  const data = res ? await res.json() : null;
+  if (data && data.ok) { closeTodoModal(); loadTodo(); }
+  else showAlert(alertEl, data?.error || 'Erreur lors de la sauvegarde.');
+}
+
+async function deleteTodoItem(id) {
+  if (!confirm('Supprimer cet élément ?')) return;
+  const res = await API.request('DELETE', `/admin/todo/${id}`);
+  const data = res ? await res.json() : null;
+  if (data && data.ok) loadTodo();
+  else showAlert(document.getElementById('todo-modal-alert') || document.getElementById('users-alert'), data?.error || 'Erreur.');
 }

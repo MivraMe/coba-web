@@ -7,7 +7,7 @@ const { pool } = require('../db');
 const { requireAuth, requireAdmin, requireSuperAdmin } = require('../middleware/auth');
 const { getSchedulerStatus, restartScheduler } = require('../services/scheduler');
 const { syncUserData, runScheduledRefresh } = require('../services/dataSync');
-const { sendNewGradeEmail } = require('../services/notifications/email');
+const { sendNewGradeEmail, sendAdminMessage } = require('../services/notifications/email');
 const { sendSms } = require('../services/notifications/sms');
 const { fetchNotes } = require('../services/portalApi');
 const { encrypt } = require('../services/crypto');
@@ -289,6 +289,36 @@ router.post('/users/:id/reset-password', async (req, res) => {
   }
 });
 
+// POST /api/admin/users/:id/contact
+router.post('/users/:id/contact', async (req, res) => {
+  const { message, channel } = req.body;
+  if (!message || !message.trim()) return res.status(400).json({ error: 'Message requis' });
+  if (!['email', 'sms', 'both'].includes(channel)) return res.status(400).json({ error: 'Canal invalide' });
+  try {
+    const { rows } = await pool.query('SELECT id, email, phone FROM users WHERE id = $1', [req.params.id]);
+    if (rows.length === 0) return res.status(404).json({ error: 'Utilisateur introuvable' });
+    const target = rows[0];
+    const results = {};
+    if (channel === 'email' || channel === 'both') {
+      try {
+        await sendAdminMessage(target.email, 'Message de l\'administration — NotesQC', message.trim());
+        results.email = 'ok';
+      } catch (err) { results.email = err.message; }
+    }
+    if (channel === 'sms' || channel === 'both') {
+      if (!target.phone) { results.sms = 'Aucun numéro configuré'; }
+      else {
+        try { await sendSms(target.phone, `[NotesQC] ${message.trim()}`); results.sms = 'ok'; }
+        catch (err) { results.sms = err.message; }
+      }
+    }
+    res.json({ ok: true, results });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // PATCH /api/admin/users/:id  (superadmin only)
 router.patch('/users/:id', requireSuperAdmin, async (req, res) => {
   const { email, password, phone, notify_email, notify_sms, role, portal_username, portal_password } = req.body;
@@ -439,6 +469,77 @@ router.post('/test/portal', async (req, res) => {
     res.json({ ok: true, data });
   } catch (err) {
     res.json({ ok: false, error: err.message, code: err.code });
+  }
+});
+
+// ── TODO ITEMS ────────────────────────────────────────────────────────────────
+
+// GET /api/admin/todo
+router.get('/todo', async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT * FROM todo_items
+      ORDER BY CASE priority WHEN 'Haute' THEN 1 WHEN 'Normale' THEN 2 WHEN 'Basse' THEN 3 ELSE 4 END, id ASC
+    `);
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST /api/admin/todo  (superadmin only)
+router.post('/todo', requireSuperAdmin, async (req, res) => {
+  const { title, description, status, priority } = req.body;
+  if (!title || !title.trim()) return res.status(400).json({ error: 'Titre requis' });
+  try {
+    const { rows } = await pool.query(
+      `INSERT INTO todo_items (title, description, status, priority)
+       VALUES ($1, $2, $3, $4) RETURNING *`,
+      [title.trim(), description || '', status || 'Planifié', priority || 'Normale']
+    );
+    res.json({ ok: true, item: rows[0] });
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'Un élément avec ce titre existe déjà' });
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// PATCH /api/admin/todo/:id  (superadmin only)
+router.patch('/todo/:id', requireSuperAdmin, async (req, res) => {
+  const { title, description, status, priority } = req.body;
+  try {
+    const fields = [], params = [];
+    if (title !== undefined) { params.push(title.trim()); fields.push(`title = $${params.length}`); }
+    if (description !== undefined) { params.push(description); fields.push(`description = $${params.length}`); }
+    if (status !== undefined) { params.push(status); fields.push(`status = $${params.length}`); }
+    if (priority !== undefined) { params.push(priority); fields.push(`priority = $${params.length}`); }
+    if (fields.length === 0) return res.status(400).json({ error: 'Aucune modification' });
+    params.push(new Date()); fields.push(`updated_at = $${params.length}`);
+    params.push(req.params.id);
+    const { rowCount, rows } = await pool.query(
+      `UPDATE todo_items SET ${fields.join(', ')} WHERE id = $${params.length} RETURNING *`,
+      params
+    );
+    if (rowCount === 0) return res.status(404).json({ error: 'Élément introuvable' });
+    res.json({ ok: true, item: rows[0] });
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'Un élément avec ce titre existe déjà' });
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// DELETE /api/admin/todo/:id  (superadmin only)
+router.delete('/todo/:id', requireSuperAdmin, async (req, res) => {
+  try {
+    const { rowCount } = await pool.query('DELETE FROM todo_items WHERE id = $1', [req.params.id]);
+    if (rowCount === 0) return res.status(404).json({ error: 'Élément introuvable' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 

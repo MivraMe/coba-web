@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tableau de bord — NotesQC</title>
   <link rel="stylesheet" href="/css/style.css">
+  <script>(function(){var t=localStorage.getItem('coba_theme');if(t==='dark')document.documentElement.classList.add('dark');})()</script>
   <style>
     .global-header {
       background: linear-gradient(135deg, var(--primary) 0%, #1d4ed8 100%);
@@ -57,6 +58,7 @@
     </div>
     <div class="nav-right">
       <span class="nav-email" id="navEmail"></span>
+      <button class="theme-btn" id="themeBtnNav" title="Basculer le thème" aria-label="Basculer le thème sombre/clair"><span data-theme-icon></span></button>
       <button class="nav-logout" id="navLogout">Déconnexion</button>
     </div>
   </nav>
@@ -162,6 +164,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="/js/api.js"></script>
   <script src="/js/dashboard.js"></script>
+  <script src="/js/theme.js"></script>
   <script src="/js/cookie-banner.js"></script>
 </body>
 </html>
