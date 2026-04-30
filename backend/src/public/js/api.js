@@ -142,4 +142,14 @@ function setupNav(user) {
   nav.querySelectorAll('.nav-link').forEach(a => {
     if (a.getAttribute('href') === path) a.classList.add('active');
   });
+
+  const hamburger = nav.querySelector('.nav-hamburger');
+  if (hamburger) {
+    hamburger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      nav.classList.toggle('nav-open');
+    });
+    document.addEventListener('click', () => nav.classList.remove('nav-open'));
+    nav.querySelector('.nav-links').addEventListener('click', () => nav.classList.remove('nav-open'));
+  }
 }
