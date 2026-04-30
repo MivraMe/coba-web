@@ -55,7 +55,7 @@ a:hover { text-decoration: underline; }
   text-decoration: none;
   display: flex; align-items: center;
 }
-.nav-logo { height: 38px; display: block; }
+.nav-logo { height: 42px; display: block; }
 .nav-links { display: flex; gap: .25rem; }
 .nav-link {
   color: rgba(255,255,255,.8);
@@ -80,6 +80,17 @@ a:hover { text-decoration: underline; }
   transition: background .15s;
 }
 .nav-logout:hover { background: rgba(255,255,255,.25); }
+.nav-logout-link {
+  display: none;
+  background: none; border: none; cursor: pointer;
+  color: rgba(255,255,255,.8); font-size: .9rem;
+  padding: .65rem 1rem; border-radius: var(--radius-sm);
+  text-align: left; width: 100%;
+  transition: background .15s, color .15s;
+  margin-top: .25rem;
+  border-top: 1px solid rgba(255,255,255,.15);
+}
+.nav-logout-link:hover { background: rgba(255,255,255,.15); color: #fff; }
 .nav-hamburger {
   display: flex;
   flex-direction: column; justify-content: center; align-items: center;
@@ -116,14 +127,14 @@ a:hover { text-decoration: underline; }
   width: 100%; max-width: 420px;
 }
 .auth-logo { text-align: center; margin-bottom: 1.75rem; }
-.auth-logo-img { height: 110px; margin-bottom: .75rem; }
+.auth-logo-img { height: 130px; margin-bottom: 1rem; }
 .auth-sub { color: var(--text-2); font-size: .9rem; text-align: center; margin-bottom: 1.5rem; }
 
 .onboarding-header-top {
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 1rem;
 }
-.onboarding-logo { height: 38px; }
+.onboarding-logo { height: 48px; }
 
 /* ── CARDS ── */
 .card {
@@ -562,6 +573,8 @@ tr:hover td { background: var(--bg); }
 @media (max-width: 768px) {
   .nav { padding: 0 1rem; }
   .nav-email { display: none; }
+  .nav-logout { display: none; }
+  .nav-logout-link { display: block; }
 
   /* Mobile dropdown: hidden by default, shown when .nav-open */
   .nav-links {
@@ -583,7 +596,7 @@ tr:hover td { background: var(--bg); }
   .container, .container-sm { padding: 0 1rem; }
 
   .auth-card { padding: 2rem 1.25rem; }
-  .auth-logo-img { height: 90px; }
+  .auth-logo-img { height: 110px; }
 
   .onboarding-wrap { padding: 1.25rem 1rem; }
   .onboarding-panel { padding: 1.25rem; }
@@ -619,7 +632,7 @@ tr:hover td { background: var(--bg); }
 }
 
 @media (max-width: 480px) {
-  .auth-logo-img { height: 80px; }
+  .auth-logo-img { height: 95px; }
   .global-stat-value { font-size: 1.5rem; }
   .stat-value { font-size: 1.4rem; }
   .avg-value { font-size: 1.1rem; }

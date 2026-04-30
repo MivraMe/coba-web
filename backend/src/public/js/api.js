@@ -127,7 +127,7 @@ function setupNav(user) {
   const nav = document.getElementById('main-nav');
   if (!nav || !user) return;
   nav.querySelector('.nav-email').textContent = user.email;
-  nav.querySelector('.nav-logout').addEventListener('click', () => API.logout());
+  nav.querySelectorAll('.nav-logout, .nav-logout-link').forEach(el => el.addEventListener('click', () => API.logout()));
 
   if (user.is_admin) {
     const links = nav.querySelector('.nav-links');
