@@ -80,6 +80,21 @@ router.put('/:id', async (req, res) => {
     );
     if (rows.length === 0) return res.status(403).json({ error: 'Réservé à l\'administrateur du groupe' });
 
+    if (school_year) {
+      const conflict = await pool.query(
+        `SELECT id FROM groups
+         WHERE course_code = (SELECT course_code FROM groups WHERE id = $1)
+           AND school_year = $2
+           AND id != $1`,
+        [groupId, school_year]
+      );
+      if (conflict.rows.length > 0) {
+        return res.status(409).json({
+          error: 'Un groupe pour ce cours avec cette année scolaire existe déjà.',
+        });
+      }
+    }
+
     await pool.query(
       'UPDATE groups SET total_students = COALESCE($1, total_students), school_year = COALESCE($2, school_year) WHERE id = $3',
       [total_students ?? null, school_year || null, groupId]

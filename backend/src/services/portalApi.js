@@ -99,12 +99,38 @@ function getSchoolYear(date) {
   return month >= 8 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
 }
 
+const MIN_YEAR = 2025;
+
 function pickDateForSchoolYear(dateAssigned, dateDue) {
-  const MIN_YEAR = 2025;
   if (dateAssigned && dateAssigned.getFullYear() >= MIN_YEAR) return dateAssigned;
   if (dateDue && dateDue.getFullYear() >= MIN_YEAR) return dateDue;
-  // Both absent or aberrant — fall back to server date
   return new Date();
+}
+
+// Determine the canonical school year for a COURSE by looking at all its
+// parsed assignments. Using a majority vote on date_due prevents a single
+// aberrant date_assigned (e.g. 2021, 2024) from mis-classifying the course.
+function getCanonicalSchoolYear(parsedAssignments) {
+  function majorityVote(dates) {
+    const counts = {};
+    for (const d of dates) {
+      const sy = getSchoolYear(d);
+      counts[sy] = (counts[sy] || 0) + 1;
+    }
+    return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+  }
+
+  const dueDates = parsedAssignments
+    .map(a => a.date_due)
+    .filter(d => d && d.getFullYear() >= MIN_YEAR);
+  if (dueDates.length > 0) return majorityVote(dueDates);
+
+  const assignedDates = parsedAssignments
+    .map(a => a.date_assigned)
+    .filter(d => d && d.getFullYear() >= MIN_YEAR);
+  if (assignedDates.length > 0) return majorityVote(assignedDates);
+
+  return getSchoolYear(new Date());
 }
 
 function parseAssignment(raw) {
@@ -138,4 +164,5 @@ module.exports = {
   parseAssignment,
   parseCourse,
   getSchoolYear,
+  getCanonicalSchoolYear,
 };

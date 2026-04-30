@@ -1,5 +1,5 @@
 const { pool } = require('../db');
-const { fetchNotesForUser, parseAssignment } = require('./portalApi');
+const { fetchNotesForUser, parseAssignment, getCanonicalSchoolYear } = require('./portalApi');
 const { sendNewGradeEmail } = require('./notifications/email');
 const { sendSms } = require('./notifications/sms');
 
@@ -17,18 +17,22 @@ async function syncUserData(userId) {
 async function processAssignments(userId, rawAssignments) {
   const parsed = rawAssignments.map(parseAssignment);
 
+  // Group by course_code only; school_year is determined at the course level
+  // to avoid aberrant per-assignment dates creating duplicate groups.
   const coursesMap = new Map();
   for (const a of parsed) {
-    const key = `${a.course_code}::${a.school_year}`;
-    if (!coursesMap.has(key)) {
-      coursesMap.set(key, {
+    if (!coursesMap.has(a.course_code)) {
+      coursesMap.set(a.course_code, {
         course_code: a.course_code,
         course_name: a.course_name,
-        school_year: a.school_year,
+        school_year: null,
         assignments: [],
       });
     }
-    coursesMap.get(key).assignments.push(a);
+    coursesMap.get(a.course_code).assignments.push(a);
+  }
+  for (const [, course] of coursesMap) {
+    course.school_year = getCanonicalSchoolYear(course.assignments);
   }
 
   const groupResults = [];

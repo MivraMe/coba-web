@@ -14,7 +14,25 @@ async function loadGroups() {
     return;
   }
 
-  wrap.innerHTML = `<div class="groups-list">${groups.map(renderGroupRow).join('')}</div>`;
+  // Group by school_year (already sorted DESC by backend)
+  const byYear = {};
+  for (const g of groups) {
+    const y = g.school_year || 'Année inconnue';
+    if (!byYear[y]) byYear[y] = [];
+    byYear[y].push(g);
+  }
+
+  let html = '';
+  for (const [year, list] of Object.entries(byYear)) {
+    html += `<div class="year-section" style="margin-bottom:1.75rem">
+      <div class="year-label">${year}</div>
+      <div class="groups-list">
+        ${list.map(renderGroupRow).join('')}
+      </div>
+    </div>`;
+  }
+
+  wrap.innerHTML = html;
 
   wrap.querySelectorAll('.group-row').forEach(row => {
     row.addEventListener('click', () => toggleGroupDetail(row));
@@ -32,12 +50,12 @@ function renderGroupRow(g) {
         <div class="group-row-left">
           <div class="group-row-code">${escapeHtml(g.course_code)}</div>
           <div class="group-row-name">${escapeHtml(g.course_name)}</div>
-          <div class="group-row-year">${g.school_year}</div>
         </div>
         <div class="group-row-right">
           ${g.is_admin ? '<span class="badge badge-primary">Admin</span>' : ''}
           <span class="group-members-count">${memberText}</span>
-          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="chevron" style="transition:transform .2s;color:var(--text-3)">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+               class="chevron" style="transition:transform .2s;color:var(--text-3)">
             <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
           </svg>
         </div>
@@ -62,7 +80,7 @@ async function toggleGroupDetail(row) {
     detail.classList.add('open');
     chevron.style.transform = 'rotate(180deg)';
     if (!detail.dataset.loaded) {
-      detail.innerHTML = '<div style="padding:.5rem 0"><span class="spinner spinner-dark"></span></div>';
+      detail.innerHTML = '<div style="padding:.75rem 0"><span class="spinner spinner-dark"></span></div>';
       await loadGroupDetail(groupId, detail);
     }
   }
@@ -92,7 +110,9 @@ async function loadGroupDetail(groupId, detailEl) {
     adminForm = `
       <hr class="divider">
       <details>
-        <summary style="cursor:pointer;font-size:.875rem;font-weight:600;color:var(--primary)">Paramètres du groupe (admin)</summary>
+        <summary style="cursor:pointer;font-size:.875rem;font-weight:600;color:var(--primary)">
+          Paramètres du groupe (admin)
+        </summary>
         <div id="alert-group-${groupId}" class="alert alert-hidden mt-1"></div>
         <form class="group-edit-form" data-group-id="${groupId}" style="margin-top:.75rem">
           <div class="form-row">
@@ -110,10 +130,7 @@ async function loadGroupDetail(groupId, detailEl) {
       </details>`;
   }
 
-  detailEl.innerHTML = `
-    <ul class="member-list">${memberRows}</ul>
-    ${adminForm}`;
-
+  detailEl.innerHTML = `<ul class="member-list">${memberRows}</ul>${adminForm}`;
   detailEl.querySelectorAll('.group-edit-form').forEach(form => {
     form.addEventListener('submit', handleGroupEdit);
   });
@@ -131,11 +148,15 @@ async function handleGroupEdit(e) {
     total_students: parseInt(form.querySelector('.ge-total').value) || null,
   });
 
+  const data = await res.json();
   if (res && res.ok) {
     showAlert(alertEl, 'Enregistré.', 'success');
+    // Mark detail as needing reload on next open
+    const detailEl = document.getElementById(`detail-${groupId}`);
+    if (detailEl) delete detailEl.dataset.loaded;
     await loadGroups();
   } else {
-    showAlert(alertEl, 'Erreur lors de l\'enregistrement.');
+    showAlert(alertEl, data?.error || 'Erreur lors de l\'enregistrement.');
   }
 }
 

@@ -24,16 +24,72 @@ router.get('/annees', async (req, res) => {
   }
 });
 
+// GET /api/dashboard/resume?annee=2025-2026 — global header stats
+router.get('/resume', async (req, res) => {
+  const { annee } = req.query;
+  const params = [req.user.id];
+  let yearClause = '';
+  if (annee) { params.push(annee); yearClause = `AND g.school_year = $${params.length}`; }
+
+  try {
+    // Personal stats across all user's courses for the year
+    const personalRes = await pool.query(`
+      SELECT
+        ROUND(
+          SUM(a.weight * us.percentage) /
+          NULLIF(SUM(CASE WHEN us.percentage IS NOT NULL THEN a.weight ELSE 0 END), 0),
+          2
+        ) AS personal_avg,
+        ROUND(CAST(
+          PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY us.percentage) AS NUMERIC
+        ), 2) AS personal_median,
+        COALESCE(SUM(CASE WHEN us.percentage IS NOT NULL THEN a.weight ELSE 0 END), 0) AS graded_weight,
+        COALESCE(SUM(a.weight), 0) AS total_weight
+      FROM assignments a
+      LEFT JOIN user_scores us ON us.assignment_id = a.id AND us.user_id = $1
+      JOIN groups g ON g.id = a.group_id
+      JOIN group_members gm ON gm.group_id = g.id AND gm.user_id = $1
+      WHERE true ${yearClause}
+    `, params);
+
+    // Group stats: median of per-member weighted averages across all courses
+    const groupRes = await pool.query(`
+      SELECT
+        ROUND(AVG(member_avg), 2) AS group_avg,
+        ROUND(CAST(
+          PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY member_avg) AS NUMERIC
+        ), 2) AS group_median
+      FROM (
+        SELECT
+          us.user_id,
+          SUM(a.weight * us.percentage) /
+            NULLIF(SUM(CASE WHEN us.percentage IS NOT NULL THEN a.weight ELSE 0 END), 0) AS member_avg
+        FROM assignments a
+        JOIN user_scores us ON us.assignment_id = a.id
+        JOIN groups g ON g.id = a.group_id
+        JOIN group_members gm ON gm.group_id = g.id AND gm.user_id = $1
+        WHERE true ${yearClause}
+        GROUP BY us.user_id
+      ) t
+    `, params);
+
+    res.json({
+      ...personalRes.rows[0],
+      ...groupRes.rows[0],
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // GET /api/dashboard/cours?annee=2025-2026
 router.get('/cours', async (req, res) => {
   const { annee } = req.query;
   try {
     const params = [req.user.id];
     let yearClause = '';
-    if (annee) {
-      params.push(annee);
-      yearClause = `AND g.school_year = $${params.length}`;
-    }
+    if (annee) { params.push(annee); yearClause = `AND g.school_year = $${params.length}`; }
 
     const { rows } = await pool.query(
       `SELECT
@@ -47,16 +103,18 @@ router.get('/cours', async (req, res) => {
          -- Personal weighted average
          (
            SELECT ROUND(
-             SUM(a.weight * us.percentage) / NULLIF(SUM(CASE WHEN us.percentage IS NOT NULL THEN a.weight ELSE 0 END), 0),
+             SUM(a.weight * us.percentage) /
+             NULLIF(SUM(CASE WHEN us.percentage IS NOT NULL THEN a.weight ELSE 0 END), 0),
            2)
            FROM assignments a
            LEFT JOIN user_scores us ON us.assignment_id = a.id AND us.user_id = $1
            WHERE a.group_id = g.id
          ) AS personal_avg,
-         -- Group weighted average
+         -- Group weighted average (mean of member averages)
          (
            SELECT ROUND(AVG(member_avg), 2) FROM (
-             SELECT SUM(a.weight * us.percentage) / NULLIF(SUM(CASE WHEN us.percentage IS NOT NULL THEN a.weight ELSE 0 END), 0) AS member_avg
+             SELECT SUM(a.weight * us.percentage) /
+               NULLIF(SUM(CASE WHEN us.percentage IS NOT NULL THEN a.weight ELSE 0 END), 0) AS member_avg
              FROM assignments a
              JOIN user_scores us ON us.assignment_id = a.id
              JOIN group_members gm2 ON gm2.user_id = us.user_id AND gm2.group_id = g.id
@@ -64,14 +122,27 @@ router.get('/cours', async (req, res) => {
              GROUP BY us.user_id
            ) t
          ) AS group_avg,
-         -- Total weight of graded assignments (personal)
+         -- Group weighted median
+         (
+           SELECT ROUND(CAST(
+             PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY member_avg) AS NUMERIC
+           ), 2) FROM (
+             SELECT SUM(a.weight * us.percentage) /
+               NULLIF(SUM(CASE WHEN us.percentage IS NOT NULL THEN a.weight ELSE 0 END), 0) AS member_avg
+             FROM assignments a
+             JOIN user_scores us ON us.assignment_id = a.id
+             JOIN group_members gm2 ON gm2.user_id = us.user_id AND gm2.group_id = g.id
+             WHERE a.group_id = g.id
+             GROUP BY us.user_id
+           ) t
+         ) AS group_median,
+         -- Graded weight (personal)
          (
            SELECT COALESCE(SUM(a.weight), 0)
            FROM assignments a
            JOIN user_scores us ON us.assignment_id = a.id AND us.user_id = $1
            WHERE a.group_id = g.id AND us.percentage IS NOT NULL
          ) AS graded_weight,
-         -- Total weight all assignments
          (SELECT COALESCE(SUM(weight), 0) FROM assignments WHERE group_id = g.id) AS total_weight
        FROM groups g
        JOIN group_members gm ON g.id = gm.group_id AND gm.user_id = $1
@@ -90,7 +161,6 @@ router.get('/cours', async (req, res) => {
 router.get('/cours/:groupId/travaux', async (req, res) => {
   const groupId = parseInt(req.params.groupId);
   try {
-    // Ensure user is member
     const member = await pool.query(
       'SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2',
       [groupId, req.user.id]
@@ -110,12 +180,22 @@ router.get('/cours/:groupId/travaux', async (req, res) => {
          us.score_max,
          us.percentage AS personal_pct,
          us.refreshed_at,
+         -- Group average for this assignment
          (
            SELECT ROUND(AVG(us2.percentage), 2)
            FROM user_scores us2
            JOIN group_members gm ON gm.user_id = us2.user_id AND gm.group_id = $1
            WHERE us2.assignment_id = a.id AND us2.percentage IS NOT NULL
          ) AS group_avg_pct,
+         -- Group median for this assignment
+         (
+           SELECT ROUND(CAST(
+             PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY us2.percentage) AS NUMERIC
+           ), 2)
+           FROM user_scores us2
+           JOIN group_members gm ON gm.user_id = us2.user_id AND gm.group_id = $1
+           WHERE us2.assignment_id = a.id AND us2.percentage IS NOT NULL
+         ) AS group_median_pct,
          (
            SELECT COUNT(*)
            FROM user_scores us2
@@ -151,6 +231,7 @@ router.get('/cours/:groupId/graphique', async (req, res) => {
     );
     const totalWeight = parseFloat(totalRes.rows[0].total) || 100;
 
+    // Fetch all assignments with per-assignment group avg and median
     const { rows } = await pool.query(
       `SELECT
          a.id,
@@ -163,7 +244,15 @@ router.get('/cours/:groupId/graphique', async (req, res) => {
            FROM user_scores us2
            JOIN group_members gm ON gm.user_id = us2.user_id AND gm.group_id = $1
            WHERE us2.assignment_id = a.id AND us2.percentage IS NOT NULL
-         ) AS group_avg_pct
+         ) AS group_avg_pct,
+         (
+           SELECT ROUND(CAST(
+             PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY us2.percentage) AS NUMERIC
+           ), 2)
+           FROM user_scores us2
+           JOIN group_members gm ON gm.user_id = us2.user_id AND gm.group_id = $1
+           WHERE us2.assignment_id = a.id AND us2.percentage IS NOT NULL
+         ) AS group_median_pct
        FROM assignments a
        LEFT JOIN user_scores us ON us.assignment_id = a.id AND us.user_id = $2
        WHERE a.group_id = $1
@@ -171,14 +260,16 @@ router.get('/cours/:groupId/graphique', async (req, res) => {
       [groupId, req.user.id]
     );
 
-    // Build cumulative chart data
-    let cumWeight = 0;
-    let cumPersonalSum = 0;
-    let cumPersonalWeight = 0;
-    let cumGroupSum = 0;
-    let cumGroupWeight = 0;
+    // Only include assignments where at least one grade exists (group or personal)
+    const graded = rows.filter(r => r.personal_pct !== null || r.group_avg_pct !== null);
+    const gradedWeight = graded.reduce((s, r) => s + r.weight, 0);
 
-    const points = rows.map(r => {
+    let cumWeight = 0;
+    let cumPersonalSum = 0, cumPersonalWeight = 0;
+    let cumGroupAvgSum = 0, cumGroupAvgWeight = 0;
+    let cumGroupMedSum = 0, cumGroupMedWeight = 0;
+
+    const points = graded.map(r => {
       cumWeight += r.weight;
       const xPct = parseFloat(((cumWeight / totalWeight) * 100).toFixed(2));
 
@@ -187,20 +278,30 @@ router.get('/cours/:groupId/graphique', async (req, res) => {
         cumPersonalWeight += r.weight;
       }
       if (r.group_avg_pct !== null) {
-        cumGroupSum += r.weight * parseFloat(r.group_avg_pct);
-        cumGroupWeight += r.weight;
+        cumGroupAvgSum += r.weight * parseFloat(r.group_avg_pct);
+        cumGroupAvgWeight += r.weight;
+      }
+      if (r.group_median_pct !== null) {
+        cumGroupMedSum += r.weight * parseFloat(r.group_median_pct);
+        cumGroupMedWeight += r.weight;
       }
 
       return {
         title: r.title,
         weight: r.weight,
         cumulative_weight_pct: xPct,
-        personal_avg: cumPersonalWeight > 0 ? parseFloat((cumPersonalSum / cumPersonalWeight).toFixed(2)) : null,
-        group_avg: cumGroupWeight > 0 ? parseFloat((cumGroupSum / cumGroupWeight).toFixed(2)) : null,
+        // Moyenne mode
+        personal_running_avg: cumPersonalWeight > 0
+          ? parseFloat((cumPersonalSum / cumPersonalWeight).toFixed(2)) : null,
+        group_running_avg: cumGroupAvgWeight > 0
+          ? parseFloat((cumGroupAvgSum / cumGroupAvgWeight).toFixed(2)) : null,
+        // Médiane mode: per-assignment raw values
+        personal_pct: r.personal_pct !== null ? parseFloat(r.personal_pct) : null,
+        group_median_pct: r.group_median_pct !== null ? parseFloat(r.group_median_pct) : null,
       };
     });
 
-    res.json({ points, total_weight: totalWeight });
+    res.json({ points, total_weight: totalWeight, graded_weight: gradedWeight });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Erreur serveur' });

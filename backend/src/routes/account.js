@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt');
 const { pool } = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const { encrypt } = require('../services/crypto');
-const { testHealth, fetchNotes } = require('../services/portalApi');
+const { fetchNotes } = require('../services/portalApi');
 const { processAssignments } = require('../services/dataSync');
 
 const router = express.Router();
@@ -70,7 +70,6 @@ router.put('/portail', async (req, res) => {
   }
 
   try {
-    await testHealth(portal_username, portal_password);
     const data = await fetchNotes(portal_username, portal_password);
     const encrypted = encrypt(portal_password);
 

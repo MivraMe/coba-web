@@ -2,7 +2,7 @@ const express = require('express');
 const { pool } = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const { encrypt } = require('../services/crypto');
-const { testHealth, fetchNotes, parseAssignment, getSchoolYear } = require('../services/portalApi');
+const { fetchNotes, parseAssignment, getCanonicalSchoolYear } = require('../services/portalApi');
 const { processAssignments } = require('../services/dataSync');
 
 const router = express.Router();
@@ -29,53 +29,57 @@ router.post('/portail', async (req, res) => {
   }
 
   try {
-    // Test health
-    await testHealth(portal_username, portal_password);
-
-    // Fetch notes
+    // Verify credentials by fetching notes (401/502/504 throw with code)
     const data = await fetchNotes(portal_username, portal_password);
     const rawAssignments = data.assignments || [];
 
-    // Parse and discover courses
+    // Parse and discover courses — group by course_code only,
+    // then apply canonical school_year (same logic as processAssignments)
     const parsed = rawAssignments.map(parseAssignment);
     const coursesMap = new Map();
     for (const a of parsed) {
-      const key = `${a.course_code}::${a.school_year}`;
-      if (!coursesMap.has(key)) {
-        coursesMap.set(key, {
+      if (!coursesMap.has(a.course_code)) {
+        coursesMap.set(a.course_code, {
           course_code: a.course_code,
           course_name: a.course_name,
-          school_year: a.school_year || 'Inconnue',
+          assignments: [],
         });
       }
+      coursesMap.get(a.course_code).assignments.push(a);
+    }
+    for (const [, c] of coursesMap) {
+      c.school_year = getCanonicalSchoolYear(c.assignments);
     }
 
     // Check which groups already exist
     const courses = [];
     for (const [, c] of coursesMap) {
       const { rows } = await pool.query(
-        'SELECT id, (SELECT COUNT(*) FROM group_members WHERE group_id = groups.id) as member_count FROM groups WHERE course_code = $1 AND school_year = $2',
+        `SELECT id,
+           (SELECT COUNT(*) FROM group_members WHERE group_id = groups.id) AS member_count
+         FROM groups WHERE course_code = $1 AND school_year = $2`,
         [c.course_code, c.school_year]
       );
       courses.push({
-        ...c,
+        course_code: c.course_code,
+        course_name: c.course_name,
+        school_year: c.school_year,
         group_id: rows[0]?.id || null,
         member_count: rows[0] ? parseInt(rows[0].member_count) : 0,
         is_new: !rows[0],
       });
     }
 
-    // Save encrypted credentials, mark step 1
+    // Save encrypted credentials
     const encrypted = encrypt(portal_password);
     await pool.query(
       'UPDATE users SET portal_username = $1, portal_password_encrypted = $2, onboarding_step = GREATEST(onboarding_step, 1) WHERE id = $3',
       [portal_username, encrypted, req.user.id]
     );
 
-    // Process assignments in DB
+    // Insert all assignments in DB
     await processAssignments(req.user.id, rawAssignments);
 
-    // Advance to step 2
     await pool.query(
       'UPDATE users SET onboarding_step = GREATEST(onboarding_step, 2) WHERE id = $1',
       [req.user.id]
@@ -94,7 +98,7 @@ router.post('/portail', async (req, res) => {
 
 // POST /api/onboarding/groupes — étape 3 (configure new groups)
 router.post('/groupes', async (req, res) => {
-  const { groups } = req.body; // [{ group_id, school_year, total_students }]
+  const { groups } = req.body;
   if (!Array.isArray(groups)) return res.status(400).json({ error: 'Données invalides' });
 
   try {
@@ -112,12 +116,10 @@ router.post('/groupes', async (req, res) => {
         }
       }
     }
-
     await pool.query(
       'UPDATE users SET onboarding_step = GREATEST(onboarding_step, 3) WHERE id = $1',
       [req.user.id]
     );
-
     res.json({ ok: true });
   } catch (err) {
     console.error(err);
@@ -128,7 +130,6 @@ router.post('/groupes', async (req, res) => {
 // POST /api/onboarding/notifications — étape 4
 router.post('/notifications', async (req, res) => {
   const { recovery_email, phone, notify_email, notify_sms } = req.body;
-
   try {
     await pool.query(
       `UPDATE users SET

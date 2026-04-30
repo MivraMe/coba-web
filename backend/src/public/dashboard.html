@@ -5,6 +5,45 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tableau de bord — Notes Esther-Blondin</title>
   <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .global-header {
+      background: linear-gradient(135deg, var(--primary) 0%, #1d4ed8 100%);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      color: #fff;
+      margin-bottom: 1.5rem;
+    }
+    .global-header h2 { font-size: 1rem; font-weight: 600; opacity: .8; margin-bottom: 1rem; }
+    .global-stats-row { display: flex; gap: 2rem; flex-wrap: wrap; }
+    .global-stat { }
+    .global-stat-label { font-size: .75rem; opacity: .7; text-transform: uppercase; letter-spacing: .05em; }
+    .global-stat-value { font-size: 1.9rem; font-weight: 800; line-height: 1.1; }
+    .global-stat-sub { font-size: .8rem; opacity: .7; margin-top: .1rem; }
+    .divider-v { width: 1px; background: rgba(255,255,255,.25); align-self: stretch; }
+    .global-expand-btn {
+      background: rgba(255,255,255,.15); border: none; color: #fff;
+      padding: .35rem .75rem; border-radius: var(--radius-sm);
+      cursor: pointer; font-size: .85rem; margin-top: 1rem;
+      transition: background .15s;
+    }
+    .global-expand-btn:hover { background: rgba(255,255,255,.25); }
+    .global-expanded {
+      margin-top: 1.25rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid rgba(255,255,255,.2);
+    }
+    .global-chart-wrap { position: relative; height: 220px; }
+    .toggle-bar {
+      display: inline-flex; border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm); overflow: hidden;
+    }
+    .toggle-btn {
+      padding: .35rem .85rem; font-size: .875rem;
+      background: var(--surface); border: none; cursor: pointer;
+      color: var(--text-2); transition: background .15s, color .15s;
+    }
+    .toggle-btn.active { background: var(--primary); color: #fff; }
+  </style>
 </head>
 <body>
   <nav class="nav" id="main-nav">
@@ -22,21 +61,40 @@
 
   <div class="page">
     <div class="container">
-      <!-- Header -->
-      <div class="flex-between mb-2">
-        <h1 style="font-size:1.4rem;font-weight:700">Tableau de bord</h1>
-        <button class="btn btn-ghost btn-sm" id="sync-btn">
-          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/>
-          </svg>
-          Synchroniser
-        </button>
+
+      <!-- Global header stats -->
+      <div class="global-header" id="global-header">
+        <div class="flex-between" style="align-items:flex-start">
+          <h2>Aperçu général</h2>
+          <button class="nav-logout" id="sync-btn" style="font-size:.8rem;padding:.3rem .65rem">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="display:inline;vertical-align:middle;margin-right:.25rem"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
+            Synchroniser
+          </button>
+        </div>
+        <div id="global-stats-row" class="global-stats-row">
+          <div style="opacity:.6;font-size:.9rem">Chargement…</div>
+        </div>
+        <button class="global-expand-btn" id="global-expand-btn">▼ Afficher plus</button>
+        <div class="global-expanded hidden" id="global-expanded">
+          <div class="global-chart-wrap">
+            <canvas id="global-chart"></canvas>
+          </div>
+        </div>
       </div>
       <div id="sync-alert" class="alert alert-hidden"></div>
 
       <!-- Year filter -->
       <div class="year-filter" id="year-filter">
         <div class="loading-overlay"><span class="spinner spinner-dark"></span></div>
+      </div>
+
+      <!-- Controls row -->
+      <div class="flex-between mb-2" id="controls-row" style="display:none">
+        <span class="text-sm text-muted">Cliquez sur un cours pour voir le détail</span>
+        <div class="toggle-bar">
+          <button class="toggle-btn active" id="toggle-avg" data-mode="moyenne">Moyenne</button>
+          <button class="toggle-btn" id="toggle-med" data-mode="mediane">Médiane</button>
+        </div>
       </div>
 
       <!-- Courses grid -->
@@ -67,10 +125,11 @@
               <tr>
                 <th>Évaluation</th>
                 <th>Catégorie</th>
-                <th>Pondération</th>
+                <th>Pond.</th>
                 <th>Date</th>
                 <th>Ma note</th>
                 <th>Moy. groupe</th>
+                <th>Méd. groupe</th>
               </tr>
             </thead>
             <tbody id="assignments-table"></tbody>
