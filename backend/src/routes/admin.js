@@ -477,7 +477,10 @@ router.post('/test/portal', async (req, res) => {
 // GET /api/admin/todo
 router.get('/todo', async (req, res) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM todo_items ORDER BY id ASC');
+    const { rows } = await pool.query(`
+      SELECT * FROM todo_items
+      ORDER BY CASE priority WHEN 'Haute' THEN 1 WHEN 'Normale' THEN 2 WHEN 'Basse' THEN 3 ELSE 4 END, id ASC
+    `);
     res.json(rows);
   } catch (err) {
     console.error(err);
