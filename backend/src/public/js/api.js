@@ -126,30 +126,49 @@ function formatDate(dateStr) {
 function setupNav(user) {
   const nav = document.getElementById('main-nav');
   if (!nav || !user) return;
-  nav.querySelector('.nav-email').textContent = user.email;
-  nav.querySelectorAll('.nav-logout, .nav-logout-link').forEach(el => el.addEventListener('click', () => API.logout()));
 
+  nav.querySelector('.nav-email').textContent = user.email;
+  nav.querySelector('.nav-logout').addEventListener('click', () => API.logout());
+
+  // Inject admin link if needed
   if (user.is_admin) {
-    const links = nav.querySelector('.nav-links');
     const a = document.createElement('a');
-    a.href = '/admin';
-    a.className = 'nav-link';
-    a.textContent = 'Admin';
-    links.appendChild(a);
+    a.href = '/admin'; a.className = 'nav-link'; a.textContent = 'Admin';
+    nav.querySelector('.nav-links').appendChild(a);
   }
 
+  // Inject logout into mobile dropdown
+  const logoutLink = document.createElement('button');
+  logoutLink.className = 'nav-logout-link';
+  logoutLink.textContent = 'Déconnexion';
+  logoutLink.addEventListener('click', () => API.logout());
+  nav.querySelector('.nav-links').appendChild(logoutLink);
+
+  // Active link
   const path = window.location.pathname;
   nav.querySelectorAll('.nav-link').forEach(a => {
     if (a.getAttribute('href') === path) a.classList.add('active');
   });
 
+  // JS-driven mobile/desktop mode — more reliable than CSS-only
   const hamburger = nav.querySelector('.nav-hamburger');
-  if (hamburger) {
-    hamburger.addEventListener('click', (e) => {
-      e.stopPropagation();
-      nav.classList.toggle('nav-open');
-    });
-    document.addEventListener('click', () => nav.classList.remove('nav-open'));
-    nav.querySelector('.nav-links').addEventListener('click', () => nav.classList.remove('nav-open'));
+  const desktopLogout = nav.querySelector('.nav-logout');
+  const mq = window.matchMedia('(max-width: 768px)');
+
+  function applyMode(mobile) {
+    hamburger.style.display = mobile ? 'flex' : 'none';
+    desktopLogout.style.display = mobile ? 'none' : '';
+  }
+  applyMode(mq.matches);
+  mq.addEventListener('change', e => applyMode(e.matches));
+
+  // Hamburger toggle
+  hamburger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    nav.classList.toggle('nav-open');
+  });
+  document.addEventListener('click', () => nav.classList.remove('nav-open'));
+  nav.querySelector('.nav-links').addEventListener('click', () => nav.classList.remove('nav-open'));
+}
   }
 }
