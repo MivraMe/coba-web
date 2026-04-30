@@ -28,7 +28,7 @@ router.post('/register', async (req, res) => {
 
     if (invitation_token) {
       const { rows: invRows } = await pool.query(
-        'SELECT id, email FROM user_invitations WHERE token = $1',
+        'SELECT id, email, inviter_id FROM user_invitations WHERE token = $1',
         [invitation_token]
       ).catch(() => ({ rows: [] }));
       const inv = invRows[0];
@@ -51,6 +51,11 @@ router.post('/register', async (req, res) => {
             [inv.id]
           ).catch(() => {});
         }
+        // Enregistrer l'inviteur sur le nouveau compte
+        await pool.query(
+          'UPDATE users SET invited_by_user_id = $1 WHERE id = $2',
+          [inv.inviter_id, user.id]
+        ).catch(() => {});
       }
     }
 

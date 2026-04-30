@@ -124,6 +124,9 @@ CREATE TABLE IF NOT EXISTS user_invitations (
 CREATE INDEX IF NOT EXISTS idx_user_invitations_token ON user_invitations(token);
 CREATE INDEX IF NOT EXISTS idx_user_invitations_inviter ON user_invitations(inviter_id);
 
+-- Traçabilité des invitations sur les comptes utilisateurs
+ALTER TABLE users ADD COLUMN IF NOT EXISTS invited_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
+
 -- Migrations idempotentes pour user_invitations
 ALTER TABLE user_invitations ALTER COLUMN email DROP NOT NULL;
 ALTER TABLE user_invitations ALTER COLUMN expires_at DROP NOT NULL;

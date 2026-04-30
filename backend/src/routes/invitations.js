@@ -111,7 +111,7 @@ router.post('/link', requireAuth, async (req, res) => {
 router.get('/', requireAuth, async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT id, email, expires_at, used_at, use_count, max_uses, created_at
+      `SELECT id, email, token, expires_at, used_at, use_count, max_uses, created_at
        FROM user_invitations
        WHERE inviter_id = $1
        ORDER BY created_at DESC`,
