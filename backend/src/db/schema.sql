@@ -78,3 +78,30 @@ CREATE INDEX IF NOT EXISTS idx_group_members_group ON group_members(group_id);
 CREATE INDEX IF NOT EXISTS idx_assignments_group ON assignments(group_id);
 CREATE INDEX IF NOT EXISTS idx_user_scores_user ON user_scores(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_scores_assignment ON user_scores(assignment_id);
+
+-- Admin flag (idempotent migration)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT false;
+
+CREATE TABLE IF NOT EXISTS sync_log (
+  id SERIAL PRIMARY KEY,
+  group_id INTEGER REFERENCES groups(id) ON DELETE SET NULL,
+  group_course_code VARCHAR(20),
+  user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  finished_at TIMESTAMPTZ,
+  success BOOLEAN,
+  error_message TEXT,
+  new_scores INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS notification_log (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  type VARCHAR(10) NOT NULL,
+  sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  success BOOLEAN NOT NULL DEFAULT true
+);
+
+CREATE INDEX IF NOT EXISTS idx_sync_log_group ON sync_log(group_id);
+CREATE INDEX IF NOT EXISTS idx_sync_log_started ON sync_log(started_at);
+CREATE INDEX IF NOT EXISTS idx_notif_log_sent ON notification_log(type, sent_at);

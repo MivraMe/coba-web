@@ -16,8 +16,9 @@ app.use('/api/onboarding', require('./routes/onboarding'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/groupes', require('./routes/groups'));
 app.use('/api/compte', require('./routes/account'));
+app.use('/api/admin', require('./routes/admin'));
 
-const pages = ['register', 'onboarding', 'dashboard', 'groupes', 'compte'];
+const pages = ['register', 'onboarding', 'dashboard', 'groupes', 'compte', 'admin'];
 pages.forEach(page => {
   app.get(`/${page}`, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', `${page}.html`));

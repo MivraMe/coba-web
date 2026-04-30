@@ -128,6 +128,16 @@ function setupNav(user) {
   if (!nav || !user) return;
   nav.querySelector('.nav-email').textContent = user.email;
   nav.querySelector('.nav-logout').addEventListener('click', () => API.logout());
+
+  if (user.is_admin) {
+    const links = nav.querySelector('.nav-links');
+    const a = document.createElement('a');
+    a.href = '/admin';
+    a.className = 'nav-link';
+    a.textContent = 'Admin';
+    links.appendChild(a);
+  }
+
   const path = window.location.pathname;
   nav.querySelectorAll('.nav-link').forEach(a => {
     if (a.getAttribute('href') === path) a.classList.add('active');

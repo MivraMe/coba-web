@@ -36,6 +36,11 @@ services:
       PORTAL_BASE_URL: ${PORTAL_BASE_URL}
       NODE_ENV: ${NODE_ENV:-production}
       REFRESH_INTERVAL_MINUTES: ${REFRESH_INTERVAL_MINUTES:-5}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+    volumes:
+      # Required for the admin deploy endpoint (docker-in-docker)
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /opt/stacks/coba-web:/workspace
     depends_on:
       db:
         condition: service_healthy

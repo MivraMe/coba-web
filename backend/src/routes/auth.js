@@ -7,8 +7,8 @@ const { requireAuth } = require('../middleware/auth');
 const router = express.Router();
 const SALT_ROUNDS = 12;
 
-function signToken(userId, email) {
-  return jwt.sign({ id: userId, email }, process.env.JWT_SECRET, { expiresIn: '7d' });
+function signToken(userId, email, isAdmin = false) {
+  return jwt.sign({ id: userId, email, is_admin: isAdmin }, process.env.JWT_SECRET, { expiresIn: '7d' });
 }
 
 // POST /api/auth/register
@@ -18,13 +18,20 @@ router.post('/register', async (req, res) => {
   if (password.length < 8) return res.status(400).json({ error: 'Le mot de passe doit comporter au moins 8 caractères' });
 
   try {
+    const normalizedEmail = email.toLowerCase().trim();
+    const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase().trim();
+
+    // First user ever, or matches ADMIN_EMAIL env var → gets admin
+    const { rows: existing } = await pool.query('SELECT 1 FROM users LIMIT 1');
+    const isAdmin = existing.length === 0 || (adminEmail && normalizedEmail === adminEmail);
+
     const hash = await bcrypt.hash(password, SALT_ROUNDS);
     const { rows } = await pool.query(
-      'INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id, email, onboarding_step, onboarding_completed',
-      [email.toLowerCase().trim(), hash]
+      'INSERT INTO users (email, password_hash, is_admin) VALUES ($1, $2, $3) RETURNING id, email, onboarding_step, onboarding_completed, is_admin',
+      [normalizedEmail, hash, isAdmin]
     );
     const user = rows[0];
-    res.status(201).json({ token: signToken(user.id, user.email), user });
+    res.status(201).json({ token: signToken(user.id, user.email, user.is_admin), user });
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'Ce courriel est déjà utilisé' });
     console.error(err);
@@ -39,7 +46,7 @@ router.post('/login', async (req, res) => {
 
   try {
     const { rows } = await pool.query(
-      'SELECT id, email, password_hash, onboarding_step, onboarding_completed FROM users WHERE email = $1',
+      'SELECT id, email, password_hash, onboarding_step, onboarding_completed, is_admin FROM users WHERE email = $1',
       [email.toLowerCase().trim()]
     );
     const user = rows[0];
@@ -49,7 +56,7 @@ router.post('/login', async (req, res) => {
     if (!match) return res.status(401).json({ error: 'Identifiants incorrects' });
 
     const { password_hash, ...safeUser } = user;
-    res.json({ token: signToken(user.id, user.email), user: safeUser });
+    res.json({ token: signToken(user.id, user.email, user.is_admin), user: safeUser });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -60,7 +67,7 @@ router.post('/login', async (req, res) => {
 router.get('/me', requireAuth, async (req, res) => {
   try {
     const { rows } = await pool.query(
-      'SELECT id, email, recovery_email, phone, notify_email, notify_sms, onboarding_step, onboarding_completed, created_at FROM users WHERE id = $1',
+      'SELECT id, email, recovery_email, phone, notify_email, notify_sms, onboarding_step, onboarding_completed, is_admin, created_at FROM users WHERE id = $1',
       [req.user.id]
     );
     if (!rows[0]) return res.status(404).json({ error: 'Utilisateur introuvable' });

@@ -43,7 +43,6 @@ async function processAssignments(userId, rawAssignments) {
     await client.query('BEGIN');
 
     for (const [, course] of coursesMap) {
-      // Insert group, update name if it exists
       const groupRes = await client.query(
         `INSERT INTO groups (course_code, course_name, school_year)
          VALUES ($1, $2, $3)
@@ -54,7 +53,6 @@ async function processAssignments(userId, rawAssignments) {
       const group = groupRes.rows[0];
       const isNew = group.admin_user_id === null;
 
-      // First user to create the group becomes admin
       await client.query(
         'UPDATE groups SET admin_user_id = $1 WHERE id = $2 AND admin_user_id IS NULL RETURNING id',
         [userId, group.id]
@@ -139,9 +137,13 @@ async function syncGroupAllMembers(groupId) {
 }
 
 async function runScheduledRefresh() {
-  const { rows: groups } = await pool.query('SELECT id FROM groups');
+  const { rows: groups } = await pool.query('SELECT id, course_code FROM groups');
 
-  for (const { id: groupId } of groups) {
+  for (const group of groups) {
+    const startedAt = new Date();
+    let userId = null;
+    let newScores = 0;
+
     try {
       const { rows } = await pool.query(
         `SELECT u.*, gm.refreshed_at AS last_refresh
@@ -150,25 +152,27 @@ async function runScheduledRefresh() {
          WHERE gm.group_id = $1 AND u.portal_username IS NOT NULL
          ORDER BY gm.refreshed_at ASC NULLS FIRST
          LIMIT 1`,
-        [groupId]
+        [group.id]
       );
 
       if (rows.length === 0) continue;
       const user = rows[0];
+      userId = user.id;
 
       const { newGrades } = await syncUserData(user.id);
+      newScores = newGrades.length;
 
       await pool.query(
         'UPDATE group_members SET refreshed_at = NOW() WHERE group_id = $1 AND user_id = $2',
-        [groupId, user.id]
+        [group.id, user.id]
       );
 
       if (newGrades.length > 0) {
-        await syncGroupAllMembers(groupId);
+        await syncGroupAllMembers(group.id);
 
         const { rows: members } = await pool.query(
           'SELECT u.* FROM users u JOIN group_members gm ON u.id = gm.user_id WHERE gm.group_id = $1',
-          [groupId]
+          [group.id]
         );
         for (const member of members) {
           for (const gradeInfo of newGrades) {
@@ -178,8 +182,19 @@ async function runScheduledRefresh() {
           }
         }
       }
+
+      await pool.query(
+        `INSERT INTO sync_log (group_id, group_course_code, user_id, started_at, finished_at, success, new_scores)
+         VALUES ($1, $2, $3, $4, NOW(), true, $5)`,
+        [group.id, group.course_code, userId, startedAt, newScores]
+      );
     } catch (err) {
-      console.error(`Erreur refresh groupe ${groupId}:`, err.message);
+      console.error(`Erreur refresh groupe ${group.id}:`, err.message);
+      await pool.query(
+        `INSERT INTO sync_log (group_id, group_course_code, user_id, started_at, finished_at, success, error_message, new_scores)
+         VALUES ($1, $2, $3, $4, NOW(), false, $5, 0)`,
+        [group.id, group.course_code, userId, startedAt, err.message]
+      ).catch(() => {});
     }
   }
 }
@@ -189,11 +204,32 @@ async function sendNotifications(user, { assignment, group, score }) {
   const details = { courseCode: group.course_code, courseName: group.course_name, assignment, score };
 
   if (user.notify_email && user.email) {
-    await sendNewGradeEmail(user.email, subject, details);
+    let success = true;
+    try {
+      await sendNewGradeEmail(user.email, subject, details);
+    } catch (err) {
+      success = false;
+      console.error('Erreur courriel:', err.message);
+    }
+    await pool.query(
+      'INSERT INTO notification_log (user_id, type, success) VALUES ($1, $2, $3)',
+      [user.id, 'email', success]
+    ).catch(() => {});
   }
+
   if (user.notify_sms && user.phone) {
     const msg = `Nouvelle note: ${assignment.title} (${group.course_code}) - ${score.score_obtained}/${score.score_max} (${score.percentage}%)`;
-    await sendSms(user.phone, msg);
+    let success = true;
+    try {
+      await sendSms(user.phone, msg);
+    } catch (err) {
+      success = false;
+      console.error('Erreur SMS:', err.message);
+    }
+    await pool.query(
+      'INSERT INTO notification_log (user_id, type, success) VALUES ($1, $2, $3)',
+      [user.id, 'sms', success]
+    ).catch(() => {});
   }
 }
 

@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Administration — Notes Esther-Blondin</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="nav" id="main-nav">
+    <a class="nav-brand" href="/dashboard">Notes EB</a>
+    <div class="nav-links">
+      <a href="/dashboard" class="nav-link">Tableau de bord</a>
+      <a href="/groupes" class="nav-link">Groupes</a>
+      <a href="/compte" class="nav-link">Mon compte</a>
+    </div>
+    <div class="nav-right">
+      <span class="nav-email"></span>
+      <button class="nav-logout">Déconnexion</button>
+    </div>
+  </nav>
+
+  <div class="page">
+    <div class="container">
+      <div class="flex-between mb-2" style="margin-bottom:1.25rem">
+        <h1 style="font-size:1.4rem;font-weight:700">Administration</h1>
+      </div>
+
+      <div class="admin-tabs">
+        <button class="admin-tab active" data-tab="monitoring">Monitoring</button>
+        <button class="admin-tab" data-tab="config">Configuration</button>
+        <button class="admin-tab" data-tab="deploy">Mise à jour</button>
+      </div>
+
+      <!-- ── MONITORING ── -->
+      <div id="tab-monitoring">
+        <div class="admin-stat-grid" id="stat-cards">
+          <div class="admin-stat-card"><div class="stat-num" id="s-users">—</div><div class="stat-lbl">Utilisateurs</div></div>
+          <div class="admin-stat-card"><div class="stat-num" id="s-groups">—</div><div class="stat-lbl">Groupes</div></div>
+          <div class="admin-stat-card"><div class="stat-num" id="s-assigns">—</div><div class="stat-lbl">Évaluations</div></div>
+          <div class="admin-stat-card"><div class="stat-num" id="s-email7">—</div><div class="stat-lbl">Courriels (7 j)</div></div>
+          <div class="admin-stat-card"><div class="stat-num" id="s-sms7">—</div><div class="stat-lbl">SMS (7 j)</div></div>
+          <div class="admin-stat-card"><div class="stat-num" id="s-errors">—</div><div class="stat-lbl">Erreurs API (24 h)</div></div>
+        </div>
+
+        <div class="admin-section">
+          <h3>Scheduler</h3>
+          <div id="scheduler-info" style="font-size:.9rem;color:var(--text-2)">Chargement…</div>
+        </div>
+
+        <div class="admin-section">
+          <h3>Dernière synchronisation par groupe</h3>
+          <div style="overflow-x:auto">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Cours</th>
+                  <th>Utilisateur</th>
+                  <th>Date</th>
+                  <th>Statut</th>
+                  <th>Nouvelles notes</th>
+                </tr>
+              </thead>
+              <tbody id="sync-tbody"><tr><td colspan="5" style="color:var(--text-3);text-align:center">Chargement…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="admin-section" id="errors-section">
+          <h3>Erreurs API (dernières 24 h)</h3>
+          <div id="errors-list" style="font-size:.875rem;color:var(--text-2)">Chargement…</div>
+        </div>
+      </div>
+
+      <!-- ── CONFIG ── -->
+      <div id="tab-config" class="hidden">
+        <div class="admin-section">
+          <h3>Portail &amp; Scheduler</h3>
+          <div id="config-alert" class="alert alert-hidden mb-1"></div>
+          <form id="config-form">
+            <div class="config-grid">
+              <div class="form-group">
+                <label class="form-label">PORTAL_BASE_URL</label>
+                <input type="url" class="form-control" name="PORTAL_BASE_URL" placeholder="https://portail.college-eb.com/api">
+              </div>
+              <div class="form-group">
+                <label class="form-label">REFRESH_INTERVAL_MINUTES</label>
+                <input type="number" class="form-control" name="REFRESH_INTERVAL_MINUTES" min="1" max="1440" placeholder="5">
+              </div>
+            </div>
+
+            <h3 style="margin:1.25rem 0 .75rem">SMTP (courriel)</h3>
+            <div class="config-grid">
+              <div class="form-group">
+                <label class="form-label">SMTP_HOST</label>
+                <input type="text" class="form-control" name="SMTP_HOST">
+              </div>
+              <div class="form-group">
+                <label class="form-label">SMTP_PORT</label>
+                <input type="number" class="form-control" name="SMTP_PORT" min="1" max="65535" placeholder="587">
+              </div>
+              <div class="form-group">
+                <label class="form-label">SMTP_USER</label>
+                <input type="text" class="form-control" name="SMTP_USER">
+              </div>
+              <div class="form-group">
+                <label class="form-label">SMTP_PASSWORD</label>
+                <input type="password" class="form-control" name="SMTP_PASSWORD" autocomplete="new-password">
+              </div>
+              <div class="form-group" style="grid-column:1/-1">
+                <label class="form-label">SMTP_FROM</label>
+                <input type="text" class="form-control" name="SMTP_FROM" placeholder="Notes Esther-Blondin &lt;noreply@example.com&gt;">
+              </div>
+            </div>
+
+            <h3 style="margin:1.25rem 0 .75rem">VoIP.ms (SMS)</h3>
+            <div class="config-grid">
+              <div class="form-group">
+                <label class="form-label">VOIPMS_USERNAME</label>
+                <input type="text" class="form-control" name="VOIPMS_USERNAME">
+              </div>
+              <div class="form-group">
+                <label class="form-label">VOIPMS_PASSWORD</label>
+                <input type="password" class="form-control" name="VOIPMS_PASSWORD" autocomplete="new-password">
+              </div>
+              <div class="form-group">
+                <label class="form-label">VOIPMS_DID</label>
+                <input type="text" class="form-control" name="VOIPMS_DID" placeholder="5141234567">
+              </div>
+            </div>
+
+            <div style="margin-top:1rem">
+              <button type="submit" class="btn btn-primary" id="config-save-btn">Sauvegarder</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- ── DEPLOY ── -->
+      <div id="tab-deploy" class="hidden">
+        <div class="admin-section">
+          <h3>Mise à jour du déploiement</h3>
+          <p style="font-size:.9rem;color:var(--text-2);margin-bottom:1rem">
+            Exécute <code>git pull &amp;&amp; docker-compose up -d --build</code> depuis <code>/workspace</code>.
+            Requiert que <code>/var/run/docker.sock</code> et <code>/opt/stacks/coba-web</code> soient montés dans le conteneur.
+          </p>
+          <button class="btn btn-primary" id="deploy-btn">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="display:inline;vertical-align:middle;margin-right:.3rem"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
+            Pull et redémarrer
+          </button>
+          <pre id="deploy-output" class="deploy-console hidden"></pre>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/admin.js"></script>
+  <script src="/js/cookie-banner.js"></script>
+</body>
+</html>

@@ -5,6 +5,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const alert = document.getElementById('alert');
   const btn = document.getElementById('submit-btn');
 
+  ['email', 'password'].forEach(id => {
+    form[id].addEventListener('input', () => hideAlert(alert));
+  });
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     hideAlert(alert);
@@ -20,7 +24,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const data = await res.json();
     if (!res.ok) {
-      showAlert(alert, data.error || 'Erreur de connexion');
+      showAlert(alert, res.status === 401 ? 'Courriel ou mot de passe invalide.' : (data.error || 'Erreur de connexion'));
       return;
     }
 

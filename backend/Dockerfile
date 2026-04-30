@@ -1,5 +1,8 @@
 FROM node:18-alpine
 
+# docker CLI + docker-compose + git needed for admin deploy endpoint
+RUN apk add --no-cache docker-cli docker-compose git
+
 WORKDIR /app
 
 COPY package*.json ./
