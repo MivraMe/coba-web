@@ -1,47 +1,32 @@
-// VoIP.ms SMS provider — messages sans accents (limitation API)
-function removeAccents(str) {
-  return str
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^\x00-\x7F]/g, '');
-}
-
 async function sendSms(toPhone, message) {
-  const username = process.env.VOIPMS_USERNAME;
-  const password = process.env.VOIPMS_PASSWORD;
-  const did = process.env.VOIPMS_DID;
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  const from = process.env.TWILIO_PHONE_NUMBER;
 
-  if (!username || !password || !did) {
-    console.warn('VoIP.ms non configuré, SMS non envoyé');
+  if (!accountSid || !authToken || !from) {
+    console.warn('Twilio non configuré, SMS non envoyé');
     return;
   }
 
-  // Normalize phone to 10 digits NANPA (strip non-digits, remove leading +1 or 1)
-  const digits = toPhone.replace(/\D/g, '');
-  const dst = digits.length === 11 && digits.startsWith('1') ? digits.slice(1) : digits;
+  const credentials = Buffer.from(`${accountSid}:${authToken}`).toString('base64');
+  const body = new URLSearchParams({ From: from, To: toPhone, Body: message });
 
-  if (dst.length !== 10) {
-    console.warn(`Numéro invalide pour SMS: ${toPhone}`);
-    return;
-  }
+  const res = await fetch(
+    `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Basic ${credentials}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: body.toString(),
+      signal: AbortSignal.timeout(10000),
+    }
+  );
 
-  const safeMessage = removeAccents(message);
-  const params = new URLSearchParams({
-    api_username: username,
-    api_password: password,
-    method: 'sendSMS',
-    did,
-    dst,
-    message: safeMessage,
-  });
-
-  const res = await fetch(`https://voip.ms/api/v1/rest.php?${params.toString()}`, {
-    signal: AbortSignal.timeout(10000),
-  });
-
-  const body = await res.json();
-  if (body.status !== 'success') {
-    throw new Error(`VoIP.ms erreur: ${body.status}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`Twilio erreur ${res.status}: ${err.message || res.statusText}`);
   }
 }
 

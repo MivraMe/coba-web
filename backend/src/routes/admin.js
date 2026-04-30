@@ -4,7 +4,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const { pool } = require('../db');
-const { requireAuth, requireAdmin } = require('../middleware/auth');
+const { requireAuth, requireAdmin, requireSuperAdmin } = require('../middleware/auth');
 const { getSchedulerStatus, restartScheduler } = require('../services/scheduler');
 const { syncUserData, runScheduledRefresh } = require('../services/dataSync');
 const { sendNewGradeEmail } = require('../services/notifications/email');
@@ -19,7 +19,7 @@ const ENV_KEYS = [
   'PORTAL_BASE_URL',
   'REFRESH_INTERVAL_MINUTES',
   'SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASSWORD', 'SMTP_FROM',
-  'VOIPMS_USERNAME', 'VOIPMS_PASSWORD', 'VOIPMS_DID',
+  'TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_PHONE_NUMBER',
 ];
 
 const WORKSPACE_ENV = '/workspace/.env';
@@ -108,15 +108,15 @@ router.get('/sync-log', async (req, res) => {
   }
 });
 
-// GET /api/admin/config
-router.get('/config', (req, res) => {
+// GET /api/admin/config  (superadmin only)
+router.get('/config', requireSuperAdmin, (req, res) => {
   const config = {};
   for (const key of ENV_KEYS) config[key] = process.env[key] || '';
   res.json(config);
 });
 
-// POST /api/admin/config
-router.post('/config', (req, res) => {
+// POST /api/admin/config  (superadmin only)
+router.post('/config', requireSuperAdmin, (req, res) => {
   const updates = {};
   const oldInterval = process.env.REFRESH_INTERVAL_MINUTES;
 
@@ -140,8 +140,8 @@ router.post('/config', (req, res) => {
   res.json({ ok: true });
 });
 
-// GET /api/admin/deploy  (SSE stream)
-router.get('/deploy', (req, res) => {
+// GET /api/admin/deploy  (superadmin only — SSE stream)
+router.get('/deploy', requireSuperAdmin, (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
@@ -186,7 +186,7 @@ router.get('/deploy', (req, res) => {
 router.get('/users', async (req, res) => {
   try {
     const { rows: users } = await pool.query(`
-      SELECT u.id, u.email, u.created_at, u.is_admin, u.notify_email, u.notify_sms,
+      SELECT u.id, u.email, u.created_at, u.is_admin, u.role, u.notify_email, u.notify_sms,
              u.portal_username,
              MAX(gm.refreshed_at) AS last_synced
       FROM users u

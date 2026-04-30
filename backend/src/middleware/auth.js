@@ -13,7 +13,16 @@ function requireAuth(req, res, next) {
   }
 }
 
+// Allows superadmin OR group admin (is_admin = true)
 function requireAdmin(req, res, next) {
+  if (!req.user || (req.user.role !== 'superadmin' && !req.user.is_admin)) {
+    return res.status(403).json({ error: 'Accès réservé aux administrateurs' });
+  }
+  next();
+}
+
+// Allows only superadmin (for sensitive config/deploy routes)
+function requireSuperAdmin(req, res, next) {
   if (!req.user || req.user.role !== 'superadmin') {
     return res.status(403).json({ error: 'Accès réservé aux administrateurs système' });
   }
@@ -27,4 +36,5 @@ function requireRegularUser(req, res, next) {
   next();
 }
 
-module.exports = { requireAuth, requireAdmin, requireRegularUser };
+module.exports = { requireAuth, requireAdmin, requireSuperAdmin, requireRegularUser };
+

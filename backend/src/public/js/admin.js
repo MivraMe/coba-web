@@ -3,15 +3,23 @@ const ALL_TABS = ['monitoring', 'users', 'tests', 'config', 'deploy'];
 document.addEventListener('DOMContentLoaded', async () => {
   const user = await API.requireAuth();
   if (!user) return;
-  if (user.role !== 'superadmin') {
+  if (user.role !== 'superadmin' && !user.is_admin) {
     window.location.href = '/dashboard';
     return;
   }
   setupNav(user);
 
+  const isSuperAdmin = user.role === 'superadmin';
+
+  // Hide config/deploy tabs for non-superadmin
+  if (!isSuperAdmin) {
+    document.querySelectorAll('.superadmin-only').forEach(el => el.classList.add('hidden'));
+  }
+
   // Tab switching
   document.querySelectorAll('.admin-tab').forEach(btn => {
     btn.addEventListener('click', () => {
+      if (btn.classList.contains('hidden')) return;
       document.querySelectorAll('.admin-tab').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       ALL_TABS.forEach(id => {
@@ -22,10 +30,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  await Promise.all([loadStats(), loadSyncLog(), loadConfig()]);
+  const initLoaders = [loadStats(), loadSyncLog()];
+  if (isSuperAdmin) initLoaders.push(loadConfig());
+  await Promise.all(initLoaders);
 
-  document.getElementById('config-form').addEventListener('submit', handleConfigSave);
-  document.getElementById('deploy-btn').addEventListener('click', handleDeploy);
+  if (isSuperAdmin) {
+    document.getElementById('config-form').addEventListener('submit', handleConfigSave);
+    document.getElementById('deploy-btn').addEventListener('click', handleDeploy);
+  }
   document.getElementById('users-refresh-btn').addEventListener('click', loadUsers);
   document.getElementById('notif-test-btn').addEventListener('click', handleNotifTest);
   document.getElementById('sync-test-btn').addEventListener('click', handleSyncTest);
@@ -206,19 +218,28 @@ function renderUsersTable(users) {
       u.notify_email ? '✉️' : '<span style="color:var(--text-3)">✉</span>',
       u.notify_sms ? '📱' : '<span style="color:var(--text-3)">📵</span>',
     ].join(' ');
-    const adminBadge = u.is_admin ? '<span class="badge badge-primary" style="margin-left:.35rem">Admin</span>' : '';
+
+    let roleBadge, roleAction;
+    if (u.role === 'superadmin') {
+      roleBadge = '<span class="badge badge-warning">Superadmin</span>';
+      roleAction = '';
+    } else if (u.is_admin) {
+      roleBadge = '<span class="badge badge-primary">Admin</span>';
+      roleAction = `<button class="btn btn-sm btn-ghost" onclick="toggleAdmin(${u.id}, true)">Révoquer admin</button>`;
+    } else {
+      roleBadge = '<span style="color:var(--text-3);font-size:.85rem">Utilisateur</span>';
+      roleAction = `<button class="btn btn-sm btn-ghost" onclick="toggleAdmin(${u.id}, false)">Promouvoir admin</button>`;
+    }
+
     return `<tr>
-      <td style="font-size:.85rem">${escapeHtml(u.email)}${adminBadge}</td>
+      <td style="font-size:.85rem">${escapeHtml(u.email)}</td>
       <td style="font-size:.8rem;white-space:nowrap">${created}</td>
       <td style="font-size:.8rem;white-space:nowrap">${synced}</td>
       <td style="font-size:.8rem">${groups}</td>
       <td style="font-size:.85rem">${notif}</td>
-      <td>
-        <button class="btn btn-sm btn-ghost" onclick="toggleAdmin(${u.id}, ${u.is_admin})">
-          ${u.is_admin ? 'Révoquer admin' : 'Promouvoir admin'}
-        </button>
-      </td>
-      <td style="white-space:nowrap;display:flex;gap:.35rem;flex-wrap:wrap">
+      <td>${roleBadge}</td>
+      <td style="display:flex;gap:.35rem;flex-wrap:wrap">
+        ${roleAction}
         <button class="btn btn-sm btn-secondary" onclick="forceSync(${u.id})">Sync</button>
         <button class="btn btn-sm btn-secondary" onclick="resetPassword(${u.id})">Réinit. MDP</button>
         <button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id}, '${escapeHtml(u.email)}')">Supprimer</button>

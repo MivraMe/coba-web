@@ -32,8 +32,8 @@
         <button class="admin-tab active" data-tab="monitoring">Monitoring</button>
         <button class="admin-tab" data-tab="users">Utilisateurs</button>
         <button class="admin-tab" data-tab="tests">Tests</button>
-        <button class="admin-tab" data-tab="config">Configuration</button>
-        <button class="admin-tab" data-tab="deploy">Mise à jour</button>
+        <button class="admin-tab superadmin-only" data-tab="config">Configuration</button>
+        <button class="admin-tab superadmin-only" data-tab="deploy">Mise à jour</button>
       </div>
 
       <!-- ── MONITORING ── -->
@@ -204,19 +204,19 @@
               </div>
             </div>
 
-            <h3 style="margin:1.25rem 0 .75rem">VoIP.ms (SMS)</h3>
+            <h3 style="margin:1.25rem 0 .75rem">Twilio (SMS)</h3>
             <div class="config-grid">
               <div class="form-group">
-                <label class="form-label">VOIPMS_USERNAME</label>
-                <input type="text" class="form-control" name="VOIPMS_USERNAME">
+                <label class="form-label">TWILIO_ACCOUNT_SID</label>
+                <input type="text" class="form-control" name="TWILIO_ACCOUNT_SID" placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
               </div>
               <div class="form-group">
-                <label class="form-label">VOIPMS_PASSWORD</label>
-                <input type="password" class="form-control" name="VOIPMS_PASSWORD" autocomplete="new-password">
+                <label class="form-label">TWILIO_AUTH_TOKEN</label>
+                <input type="password" class="form-control" name="TWILIO_AUTH_TOKEN" autocomplete="new-password">
               </div>
               <div class="form-group">
-                <label class="form-label">VOIPMS_DID</label>
-                <input type="text" class="form-control" name="VOIPMS_DID" placeholder="5141234567">
+                <label class="form-label">TWILIO_PHONE_NUMBER</label>
+                <input type="text" class="form-control" name="TWILIO_PHONE_NUMBER" placeholder="+15141234567">
               </div>
             </div>
 
