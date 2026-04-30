@@ -170,5 +170,3 @@ function setupNav(user) {
   document.addEventListener('click', () => nav.classList.remove('nav-open'));
   nav.querySelector('.nav-links').addEventListener('click', () => nav.classList.remove('nav-open'));
 }
-  }
-}
