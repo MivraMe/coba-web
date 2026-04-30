@@ -13,7 +13,7 @@ function signToken(userId, email, isAdmin = false, role = 'user') {
 
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, invitation_token } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Courriel et mot de passe requis' });
   if (password.length < 8) return res.status(400).json({ error: 'Le mot de passe doit comporter au moins 8 caractères' });
 
@@ -25,6 +25,15 @@ router.post('/register', async (req, res) => {
       [normalizedEmail, hash]
     );
     const user = rows[0];
+
+    if (invitation_token) {
+      await pool.query(
+        `UPDATE user_invitations SET used_at = NOW()
+         WHERE token = $1 AND used_at IS NULL AND expires_at > NOW() AND email = $2`,
+        [invitation_token, normalizedEmail]
+      ).catch(() => {});
+    }
+
     res.status(201).json({ token: signToken(user.id, user.email, user.is_admin, user.role), user });
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'Ce courriel est déjà utilisé' });

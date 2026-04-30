@@ -15,9 +15,14 @@
         <p class="auth-sub">Créer un compte</p>
       </div>
 
+      <div id="invite-banner" style="display:none;background:var(--primary-l);border:1px solid var(--primary);border-radius:.5rem;padding:.65rem .875rem;margin-bottom:1rem;font-size:.875rem;color:var(--primary-dark)">
+        <strong>Invitation acceptée.</strong> Crée ton compte pour rejoindre NotesQC.
+      </div>
+
       <div id="alert" class="alert alert-hidden"></div>
 
       <form id="register-form">
+        <input type="hidden" id="invitation-token" name="invitation_token">
         <div class="form-group">
           <label class="form-label" for="email">Courriel</label>
           <input type="email" id="email" name="email" class="form-control" placeholder="vous@exemple.com" required autocomplete="email">
