@@ -59,7 +59,8 @@ router.get('/resume', async (req, res) => {
         ROUND(AVG(member_avg), 2) AS group_avg,
         ROUND(CAST(
           PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY member_avg) AS NUMERIC
-        ), 2) AS group_median
+        ), 2) AS group_median,
+        COUNT(*) AS group_member_count
       FROM (
         SELECT
           us.user_id,
