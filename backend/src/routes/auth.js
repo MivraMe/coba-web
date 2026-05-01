@@ -102,6 +102,11 @@ router.post('/login', async (req, res) => {
       if (!valid) return res.status(401).json({ error: 'Code TOTP invalide' });
     }
 
+    // Reset admin elevation on every new login — forces re-verification at the panel
+    if (isAdmin) {
+      await pool.query('UPDATE users SET admin_totp_verified_at = NULL WHERE id = $1', [user.id]);
+    }
+
     const { password_hash, totp_secret, totp_enabled, ...safeUser } = user;
     res.json({ token: signToken(user.id, user.email, user.is_admin, user.role), user: safeUser });
   } catch (err) {

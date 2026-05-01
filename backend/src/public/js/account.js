@@ -188,7 +188,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('form-delete').addEventListener('submit', handleDelete);
 
   // ── TOTP ──────────────────────────────────────────────────────────────────
-  await initTotpSection(user.totp_enabled, user.totp_require_at_login);
+  const userIsAdmin = user.is_admin || user.role === 'superadmin';
+  await initTotpSection(user.totp_enabled, user.totp_require_at_login, userIsAdmin);
 
   document.getElementById('btn-totp-start-setup').addEventListener('click', startTotpSetup);
   document.getElementById('btn-totp-cancel-setup').addEventListener('click', () => showTotpView('disabled'));
@@ -368,22 +369,27 @@ function showTotpView(view) {
   }
 }
 
-async function initTotpSection(enabled, requireAtLogin) {
+async function initTotpSection(enabled, requireAtLogin, isAdmin) {
   showTotpView(enabled ? 'enabled' : 'disabled');
   if (enabled) {
+    const row = document.getElementById('totp-login-option-row');
     const checkbox = document.getElementById('totp-require-login');
-    checkbox.checked = !!requireAtLogin;
-    checkbox.addEventListener('change', async () => {
-      const alertEl = document.getElementById('alert-totp');
-      hideAlert(alertEl);
-      const res = await API.request('PUT', '/compte/totp/settings', { require_at_login: checkbox.checked });
-      if (!res) return;
-      const data = await res.json();
-      if (!res.ok) {
-        showAlert(alertEl, data.error || 'Erreur lors de la mise à jour');
-        checkbox.checked = !checkbox.checked; // revert
-      }
-    });
+    // Only admins see the "require at login" option — non-admins always have it automatic
+    if (isAdmin) {
+      row.style.display = '';
+      checkbox.checked = !!requireAtLogin;
+      checkbox.addEventListener('change', async () => {
+        const alertEl = document.getElementById('alert-totp');
+        hideAlert(alertEl);
+        const res = await API.request('PUT', '/compte/totp/settings', { require_at_login: checkbox.checked });
+        if (!res) return;
+        const data = await res.json();
+        if (!res.ok) {
+          showAlert(alertEl, data.error || 'Erreur lors de la mise à jour');
+          checkbox.checked = !checkbox.checked;
+        }
+      });
+    }
   }
 }
 
@@ -423,7 +429,8 @@ async function handleTotpEnable() {
   const data = await res.json();
   if (res.ok) {
     showTotpView('enabled');
-    await initTotpSection(true, false);
+    const u = API.getUser();
+    await initTotpSection(true, false, u?.is_admin || u?.role === 'superadmin');
     showAlert(document.getElementById('alert-totp'), 'Double authentification activée avec succès.', 'success');
   } else {
     showAlert(alertEl, data.error || 'Erreur lors de l\'activation');

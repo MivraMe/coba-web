@@ -19,6 +19,14 @@ router.use(requireAdmin);
 
 const ELEVATION_TTL_MS = 60 * 60 * 1000; // 1 heure
 
+// Vérifie que l'élévation est valide : non expirée ET postérieure au JWT courant (iat en secondes)
+function isElevated(verifiedAt, jwtIat) {
+  if (!verifiedAt) return false;
+  const verifiedMs = new Date(verifiedAt).getTime();
+  const loginMs = jwtIat * 1000; // JWT iat est en secondes
+  return verifiedMs > loginMs && (Date.now() - verifiedMs) < ELEVATION_TTL_MS;
+}
+
 // GET /api/admin/totp-elevation — statut d'élévation TOTP
 router.get('/totp-elevation', async (req, res) => {
   try {
@@ -27,13 +35,13 @@ router.get('/totp-elevation', async (req, res) => {
       [req.user.id]
     );
     const user = rows[0];
-    // totp_configured: false → must set up TOTP first
     if (!user.totp_enabled) return res.json({ totp_configured: false });
 
-    const verifiedAt = user.admin_totp_verified_at;
-    const elevated = verifiedAt && (Date.now() - new Date(verifiedAt).getTime()) < ELEVATION_TTL_MS;
-    const expiresAt = elevated ? new Date(new Date(verifiedAt).getTime() + ELEVATION_TTL_MS) : null;
-    res.json({ totp_configured: true, elevated: !!elevated, expires_at: expiresAt });
+    const elevated = isElevated(user.admin_totp_verified_at, req.user.iat);
+    const expiresAt = elevated
+      ? new Date(new Date(user.admin_totp_verified_at).getTime() + ELEVATION_TTL_MS)
+      : null;
+    res.json({ totp_configured: true, elevated, expires_at: expiresAt });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -87,8 +95,7 @@ router.use(async (req, res, next) => {
     if (!user.totp_enabled) {
       return res.status(403).json({ totp_setup_required: true });
     }
-    const verifiedAt = user.admin_totp_verified_at;
-    if (!verifiedAt || (Date.now() - new Date(verifiedAt).getTime()) >= ELEVATION_TTL_MS) {
+    if (!isElevated(user.admin_totp_verified_at, req.user.iat)) {
       return res.status(403).json({ totp_elevation_required: true });
     }
     next();
