@@ -109,7 +109,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ── Réinitialisation de mot de passe ────────────────────────────────────────
 
   const loginArea = form;
-  const loginFooter = document.getElementById('login-footer');
   const resetSection = document.getElementById('reset-section');
 
   let resetEmail = '';
