@@ -29,7 +29,17 @@ const app = express();
 
 app.use(compression());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  etag: true,
+  lastModified: true,
+  setHeaders(res, filePath) {
+    if (/\.(html|js|css)$/.test(filePath)) {
+      // Revalidate on every request — 304 if unchanged, 200 with new file if changed.
+      // Prevents stale JS/CSS after deploy without requiring manual cache clears.
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+  },
+}));
 
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/onboarding', require('./routes/onboarding'));
