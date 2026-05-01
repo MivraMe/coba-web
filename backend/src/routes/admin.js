@@ -187,7 +187,7 @@ router.get('/deploy', requireSuperAdmin, (req, res) => {
 router.get('/users', async (req, res) => {
   try {
     const { rows: users } = await pool.query(`
-      SELECT u.id, u.email, u.created_at, u.is_admin, u.role,
+      SELECT u.id, u.email, u.full_name, u.permanent_code, u.created_at, u.is_admin, u.role,
              u.notify_email, u.notify_sms, u.phone, u.portal_username,
              (SELECT email FROM users WHERE id = u.invited_by_user_id) AS invited_by_email,
              MAX(gm.refreshed_at) AS last_synced
@@ -213,6 +213,18 @@ router.get('/users', async (req, res) => {
       ...u,
       groups: groupsByUser.get(u.id) || [],
     })));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// GET /api/admin/users/:id/photo  (superadmin only)
+router.get('/users/:id/photo', requireSuperAdmin, async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT photo_base64 FROM users WHERE id = $1', [req.params.id]);
+    if (rows.length === 0) return res.status(404).json({ error: 'Utilisateur introuvable' });
+    res.json({ photo_base64: rows[0].photo_base64 || null });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -322,7 +334,7 @@ router.post('/users/:id/contact', async (req, res) => {
 
 // PATCH /api/admin/users/:id  (superadmin only)
 router.patch('/users/:id', requireSuperAdmin, async (req, res) => {
-  const { email, password, phone, notify_email, notify_sms, role, portal_username, portal_password } = req.body;
+  const { email, password, phone, notify_email, notify_sms, role, portal_username, portal_password, full_name, photo_base64 } = req.body;
 
   try {
     const fields = [];
@@ -362,6 +374,18 @@ router.patch('/users/:id', requireSuperAdmin, async (req, res) => {
       const encrypted = encrypt(portal_password);
       params.push(encrypted);
       fields.push(`portal_password_encrypted = $${params.length}`);
+    }
+    if (full_name !== undefined) {
+      params.push(full_name || null);
+      fields.push(`full_name = $${params.length}`);
+    }
+    if (photo_base64 === null) {
+      params.push(null);
+      fields.push(`photo_base64 = $${params.length}`);
+    } else if (photo_base64) {
+      const raw = photo_base64.replace(/^data:image\/[a-z]+;base64,/, '');
+      params.push(raw);
+      fields.push(`photo_base64 = $${params.length}`);
     }
 
     if (fields.length === 0) return res.status(400).json({ error: 'Aucune modification à effectuer' });

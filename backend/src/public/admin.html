@@ -91,7 +91,7 @@
             <table class="admin-table" id="users-table">
               <thead>
                 <tr>
-                  <th>Courriel</th>
+                  <th>Utilisateur</th>
                   <th>Inscription</th>
                   <th>Dernière synchro</th>
                   <th>Groupes</th>
@@ -281,7 +281,26 @@
       <div class="modal-body">
         <div id="edit-modal-alert" class="alert alert-hidden mb-1"></div>
         <input type="hidden" id="edit-user-id">
+
+        <!-- Photo section -->
+        <div style="display:flex;align-items:flex-start;gap:1rem;margin-bottom:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:.5rem;flex-shrink:0">
+            <canvas id="admin-crop-canvas" width="120" height="120" class="crop-canvas" style="width:120px;height:120px"></canvas>
+            <input type="range" id="admin-crop-zoom" min="1" max="3" step="0.01" value="1" class="crop-zoom-slider" style="width:120px">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:.5rem;justify-content:center;min-width:0">
+            <div id="edit-user-name-display" style="font-weight:600;font-size:.9rem;color:var(--text-2)"></div>
+            <label class="btn btn-secondary btn-sm" for="admin-photo-upload" style="cursor:pointer;text-align:center">Choisir une photo</label>
+            <input type="file" id="admin-photo-upload" accept="image/*" style="display:none">
+            <button type="button" class="btn btn-ghost btn-sm" id="admin-btn-remove-photo">Supprimer la photo</button>
+          </div>
+        </div>
+
         <div class="config-grid">
+          <div class="form-group">
+            <label class="form-label">Nom complet</label>
+            <input type="text" class="form-control" id="edit-full-name" placeholder="Prénom Nom">
+          </div>
           <div class="form-group">
             <label class="form-label">Courriel</label>
             <input type="email" class="form-control" id="edit-email">
