@@ -1,6 +1,129 @@
 let currentStep = 1;
 let discoveredCourses = [];
 let newGroups = [];
+let totalAssignmentsCount = 0;
+
+// ── Crop tool state ──────────────────────────────────────────────────────────
+const cropState = { img: null, zoom: 1, offsetX: 0, offsetY: 0, dragging: false, startX: 0, startY: 0, usePhoto: false };
+
+function initCropTool(base64) {
+  cropState.usePhoto = true;
+  const src = base64.startsWith('data:') ? base64 : `data:image/jpeg;base64,${base64}`;
+  const img = new Image();
+  img.onload = () => {
+    cropState.img = img;
+    const canvas = document.getElementById('crop-canvas');
+    const size = canvas.width;
+    const scale = Math.max(size / img.width, size / img.height);
+    cropState.zoom = scale;
+    cropState.offsetX = (size - img.width * scale) / 2;
+    cropState.offsetY = (size - img.height * scale) / 2;
+    const zoomSlider = document.getElementById('crop-zoom');
+    zoomSlider.min = scale.toFixed(4);
+    zoomSlider.max = (scale * 3).toFixed(4);
+    zoomSlider.value = scale.toFixed(4);
+    renderCrop('crop-canvas');
+    setupCropDrag(canvas);
+  };
+  img.src = src;
+}
+
+function renderCrop(canvasId) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const size = canvas.width;
+  ctx.clearRect(0, 0, size, size);
+
+  if (!cropState.usePhoto || !cropState.img) {
+    ctx.fillStyle = 'var(--bg-2, #e2e8f0)';
+    ctx.beginPath();
+    ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = `bold ${Math.round(size / 2.8)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('?', size / 2, size / 2 + 2);
+    return;
+  }
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.drawImage(cropState.img, cropState.offsetX, cropState.offsetY,
+    cropState.img.width * cropState.zoom, cropState.img.height * cropState.zoom);
+  ctx.restore();
+  ctx.strokeStyle = '#cbd5e1';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(size / 2, size / 2, size / 2 - 1, 0, Math.PI * 2);
+  ctx.stroke();
+}
+
+function clampCropOffset(canvasId) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas || !cropState.img) return;
+  const size = canvas.width;
+  const scaledW = cropState.img.width * cropState.zoom;
+  const scaledH = cropState.img.height * cropState.zoom;
+  cropState.offsetX = Math.min(0, Math.max(size - scaledW, cropState.offsetX));
+  cropState.offsetY = Math.min(0, Math.max(size - scaledH, cropState.offsetY));
+}
+
+function setupCropDrag(canvas) {
+  const canvasId = canvas.id;
+  canvas.addEventListener('mousedown', e => {
+    cropState.dragging = true;
+    cropState.startX = e.clientX - cropState.offsetX;
+    cropState.startY = e.clientY - cropState.offsetY;
+    canvas.style.cursor = 'grabbing';
+  });
+  window.addEventListener('mousemove', e => {
+    if (!cropState.dragging) return;
+    cropState.offsetX = e.clientX - cropState.startX;
+    cropState.offsetY = e.clientY - cropState.startY;
+    clampCropOffset(canvasId);
+    renderCrop(canvasId);
+  });
+  window.addEventListener('mouseup', () => { cropState.dragging = false; canvas.style.cursor = 'grab'; });
+  canvas.addEventListener('touchstart', e => {
+    const t = e.touches[0];
+    cropState.dragging = true;
+    cropState.startX = t.clientX - cropState.offsetX;
+    cropState.startY = t.clientY - cropState.offsetY;
+  }, { passive: true });
+  canvas.addEventListener('touchmove', e => {
+    e.preventDefault();
+    const t = e.touches[0];
+    cropState.offsetX = t.clientX - cropState.startX;
+    cropState.offsetY = t.clientY - cropState.startY;
+    clampCropOffset(canvasId);
+    renderCrop(canvasId);
+  }, { passive: false });
+  canvas.addEventListener('touchend', () => { cropState.dragging = false; });
+}
+
+function getCroppedBase64(canvasId, outputSize = 200) {
+  if (!cropState.usePhoto || !cropState.img) return null;
+  const src = document.getElementById(canvasId);
+  const scale = outputSize / src.width;
+  const out = document.createElement('canvas');
+  out.width = outputSize;
+  out.height = outputSize;
+  const ctx = out.getContext('2d');
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(outputSize / 2, outputSize / 2, outputSize / 2, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.drawImage(cropState.img,
+    cropState.offsetX * scale, cropState.offsetY * scale,
+    cropState.img.width * cropState.zoom * scale, cropState.img.height * cropState.zoom * scale);
+  ctx.restore();
+  return out.toDataURL('image/jpeg', 0.88);
+}
+// ── End crop tool ────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', async () => {
   const user = await API.requireAuth();
@@ -13,8 +136,44 @@ document.addEventListener('DOMContentLoaded', async () => {
   showStep(currentStep);
   updateStepsBar(currentStep);
 
-  // Step 1
+  // Step 1 + photo
   document.getElementById('form-1').addEventListener('submit', handleStep1);
+
+  document.getElementById('crop-zoom').addEventListener('input', e => {
+    const newZoom = parseFloat(e.target.value);
+    const canvas = document.getElementById('crop-canvas');
+    const size = canvas.width;
+    const imgX = (size / 2 - cropState.offsetX) / cropState.zoom;
+    const imgY = (size / 2 - cropState.offsetY) / cropState.zoom;
+    cropState.zoom = newZoom;
+    cropState.offsetX = size / 2 - imgX * newZoom;
+    cropState.offsetY = size / 2 - imgY * newZoom;
+    clampCropOffset('crop-canvas');
+    renderCrop('crop-canvas');
+  });
+
+  document.getElementById('photo-upload').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => initCropTool(ev.target.result);
+    reader.readAsDataURL(file);
+  });
+
+  document.getElementById('btn-no-photo').addEventListener('click', () => {
+    cropState.usePhoto = false;
+    cropState.img = null;
+    renderCrop('crop-canvas');
+  });
+
+  document.getElementById('btn-1-continue').addEventListener('click', async () => {
+    const photo = getCroppedBase64('crop-canvas');
+    if (photo) {
+      await API.request('PUT', '/compte/photo', { photo_base64: photo });
+    }
+    renderDiscovery(discoveredCourses, totalAssignmentsCount);
+    goToStep(2);
+  });
 
   // Step 2
   document.getElementById('btn-2').addEventListener('click', () => {
@@ -67,8 +226,35 @@ async function handleStep1(e) {
 
   discoveredCourses = data.courses || [];
   newGroups = discoveredCourses.filter(c => c.is_new);
-  renderDiscovery(discoveredCourses, data.total_assignments);
-  goToStep(2);
+  totalAssignmentsCount = data.total_assignments || 0;
+
+  // Show profile info + photo crop before going to step 2
+  const profile = data.profile || {};
+  if (profile.full_name || profile.permanent_code || profile.photo_base64) {
+    const infoEl = document.getElementById('profile-info');
+    infoEl.innerHTML = `
+      <div style="display:flex;align-items:center;gap:.75rem;padding:.75rem;background:var(--bg-2);border-radius:.5rem">
+        <svg width="18" height="18" fill="none" stroke="var(--success,#22c55e)" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <div>
+          ${profile.full_name ? `<div style="font-weight:600">${escapeHtml(profile.full_name)}</div>` : ''}
+          ${profile.permanent_code ? `<div class="text-muted text-sm">${escapeHtml(profile.permanent_code)}</div>` : ''}
+        </div>
+      </div>`;
+    if (profile.photo_base64) {
+      initCropTool(profile.photo_base64);
+    } else {
+      renderCrop('crop-canvas');
+    }
+    document.getElementById('profile-section').classList.remove('hidden');
+    document.getElementById('btn-1').classList.add('hidden');
+  } else {
+    renderDiscovery(discoveredCourses, totalAssignmentsCount);
+    goToStep(2);
+  }
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 function renderDiscovery(courses, totalAssignments) {

@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt');
 const { pool } = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const { encrypt } = require('../services/crypto');
-const { fetchNotes } = require('../services/portalApi');
+const { fetchNotes, fetchProfile } = require('../services/portalApi');
 const { processAssignments } = require('../services/dataSync');
 
 const router = express.Router();
@@ -62,6 +62,37 @@ router.put('/mot-de-passe', async (req, res) => {
   }
 });
 
+// GET /api/compte/photo
+router.get('/photo', async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT photo_base64 FROM users WHERE id = $1', [req.user.id]);
+    res.json({ photo_base64: rows[0]?.photo_base64 || null });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// PUT /api/compte/photo
+router.put('/photo', async (req, res) => {
+  const { photo_base64, clear } = req.body;
+  try {
+    if (clear) {
+      await pool.query('UPDATE users SET photo_base64 = NULL WHERE id = $1', [req.user.id]);
+    } else if (photo_base64) {
+      // Strip data URL prefix if present, store raw base64
+      const raw = photo_base64.replace(/^data:image\/[a-z]+;base64,/, '');
+      await pool.query('UPDATE users SET photo_base64 = $1 WHERE id = $2', [raw, req.user.id]);
+    } else {
+      return res.status(400).json({ error: 'Aucune donnée de photo fournie' });
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // PUT /api/compte/portail
 router.put('/portail', async (req, res) => {
   const { portal_username, portal_password } = req.body;
@@ -77,6 +108,17 @@ router.put('/portail', async (req, res) => {
       'UPDATE users SET portal_username = $1, portal_password_encrypted = $2 WHERE id = $3',
       [portal_username, encrypted, req.user.id]
     );
+
+    // Refresh profile data from portal
+    try {
+      const profile = await fetchProfile(portal_username, portal_password);
+      if (profile.full_name || profile.permanent_code) {
+        await pool.query(
+          'UPDATE users SET full_name = COALESCE($1, full_name), permanent_code = COALESCE($2, permanent_code) WHERE id = $3',
+          [profile.full_name || null, profile.permanent_code || null, req.user.id]
+        );
+      }
+    } catch { /* ignore profile fetch failures */ }
 
     await processAssignments(req.user.id, data.assignments || []);
     res.json({ ok: true });
