@@ -186,6 +186,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('form-portail').addEventListener('submit', handlePortail);
   document.getElementById('form-notif').addEventListener('submit', handleNotif);
   document.getElementById('form-delete').addEventListener('submit', handleDelete);
+
+  // ── TOTP ──────────────────────────────────────────────────────────────────
+  const userIsAdmin = user.is_admin || user.role === 'superadmin';
+  await initTotpSection(user.totp_enabled, user.totp_require_at_login, userIsAdmin);
+
+  document.getElementById('btn-totp-start-setup').addEventListener('click', startTotpSetup);
+  document.getElementById('btn-totp-cancel-setup').addEventListener('click', () => showTotpView('disabled'));
+  document.getElementById('btn-totp-enable').addEventListener('click', handleTotpEnable);
+  document.getElementById('btn-totp-start-disable').addEventListener('click', () => showTotpView('disable-form'));
+  document.getElementById('btn-totp-cancel-disable').addEventListener('click', () => showTotpView('enabled'));
+  document.getElementById('btn-totp-confirm-disable').addEventListener('click', handleTotpDisable);
 });
 
 async function handleSavePhoto() {
@@ -326,5 +337,128 @@ async function handleDelete(e) {
     API.logout();
   } else {
     showAlert(alert, data.error || 'Erreur lors de la suppression');
+  }
+}
+
+// ── TOTP helpers ──────────────────────────────────────────────────────────────
+
+function showTotpView(view) {
+  document.getElementById('totp-disabled-view').style.display = 'none';
+  document.getElementById('totp-setup-view').style.display = 'none';
+  document.getElementById('totp-enabled-view').style.display = 'none';
+  document.getElementById('totp-disable-view').style.display = 'none';
+  hideAlert(document.getElementById('alert-totp'));
+
+  const badge = document.getElementById('totp-badge');
+  if (view === 'disabled' || view === 'setup') {
+    document.getElementById('totp-disabled-view').style.display = view === 'disabled' ? '' : 'none';
+    document.getElementById('totp-setup-view').style.display = view === 'setup' ? '' : 'none';
+    badge.textContent = 'Désactivée';
+    badge.className = 'badge badge-neutral';
+    badge.style.display = '';
+  } else if (view === 'enabled') {
+    document.getElementById('totp-enabled-view').style.display = '';
+    badge.textContent = 'Activée';
+    badge.className = 'badge badge-success';
+    badge.style.display = '';
+  } else if (view === 'disable-form') {
+    document.getElementById('totp-disable-view').style.display = '';
+    badge.textContent = 'Activée';
+    badge.className = 'badge badge-success';
+    badge.style.display = '';
+  }
+}
+
+async function initTotpSection(enabled, requireAtLogin, isAdmin) {
+  showTotpView(enabled ? 'enabled' : 'disabled');
+  if (enabled) {
+    const row = document.getElementById('totp-login-option-row');
+    const checkbox = document.getElementById('totp-require-login');
+    // Only admins see the "require at login" option — non-admins always have it automatic
+    if (isAdmin) {
+      row.style.display = '';
+      checkbox.checked = !!requireAtLogin;
+      checkbox.addEventListener('change', async () => {
+        const alertEl = document.getElementById('alert-totp');
+        hideAlert(alertEl);
+        const res = await API.request('PUT', '/compte/totp/settings', { require_at_login: checkbox.checked });
+        if (!res) return;
+        const data = await res.json();
+        if (!res.ok) {
+          showAlert(alertEl, data.error || 'Erreur lors de la mise à jour');
+          checkbox.checked = !checkbox.checked;
+        }
+      });
+    }
+  }
+}
+
+async function startTotpSetup() {
+  const alertEl = document.getElementById('alert-totp');
+  const btn = document.getElementById('btn-totp-start-setup');
+  hideAlert(alertEl);
+  setLoading(btn, true, 'Génération…');
+
+  const data = await API.get('/compte/totp/setup');
+  setLoading(btn, false, 'Activer la double authentification');
+
+  if (!data || data.error) {
+    showAlert(alertEl, data?.error || 'Erreur lors de la génération');
+    return;
+  }
+
+  document.getElementById('totp-qr-img').src = data.qr_data_url;
+  document.getElementById('totp-secret-display').textContent = data.secret.match(/.{1,4}/g).join(' ');
+  document.getElementById('totp-setup-code').value = '';
+  showTotpView('setup');
+}
+
+async function handleTotpEnable() {
+  const alertEl = document.getElementById('alert-totp');
+  const btn = document.getElementById('btn-totp-enable');
+  const code = document.getElementById('totp-setup-code').value.trim();
+  hideAlert(alertEl);
+
+  if (!code) { showAlert(alertEl, 'Entrez le code affiché par votre application.'); return; }
+
+  setLoading(btn, true, 'Activation…');
+  const res = await API.request('POST', '/compte/totp/enable', { code });
+  setLoading(btn, false, 'Activer');
+  if (!res) return;
+
+  const data = await res.json();
+  if (res.ok) {
+    showTotpView('enabled');
+    const u = API.getUser();
+    await initTotpSection(true, false, u?.is_admin || u?.role === 'superadmin');
+    showAlert(document.getElementById('alert-totp'), 'Double authentification activée avec succès.', 'success');
+  } else {
+    showAlert(alertEl, data.error || 'Erreur lors de l\'activation');
+  }
+}
+
+async function handleTotpDisable() {
+  const alertEl = document.getElementById('alert-totp');
+  const btn = document.getElementById('btn-totp-confirm-disable');
+  const password = document.getElementById('totp-disable-pass').value;
+  const code = document.getElementById('totp-disable-code').value.trim();
+  hideAlert(alertEl);
+
+  if (!password) { showAlert(alertEl, 'Mot de passe requis.'); return; }
+  if (!code) { showAlert(alertEl, 'Code TOTP requis.'); return; }
+
+  setLoading(btn, true, 'Désactivation…');
+  const res = await API.request('POST', '/compte/totp/disable', { password, code });
+  setLoading(btn, false, 'Désactiver');
+  if (!res) return;
+
+  const data = await res.json();
+  if (res.ok) {
+    document.getElementById('totp-disable-pass').value = '';
+    document.getElementById('totp-disable-code').value = '';
+    showTotpView('disabled');
+    showAlert(document.getElementById('alert-totp'), 'Double authentification désactivée.', 'success');
+  } else {
+    showAlert(alertEl, data.error || 'Erreur lors de la désactivation');
   }
 }

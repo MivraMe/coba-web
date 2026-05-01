@@ -290,6 +290,60 @@
     </a>
   </nav>
 
+  <!-- ── GATE TOTP ADMIN ── -->
+  <div id="totp-gate-overlay" class="modal-overlay hidden" style="z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem">
+    <div style="max-width:400px;width:100%">
+
+      <!-- Panneau : vérification (TOTP déjà configuré) -->
+      <div id="totp-gate-verify" class="hidden" style="text-align:center">
+        <svg width="40" height="40" fill="none" stroke="var(--primary,#6366f1)" stroke-width="1.5" viewBox="0 0 24 24" style="margin-bottom:.75rem"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg>
+        <h2 style="font-size:1.15rem;font-weight:700;margin-bottom:.4rem">Vérification requise</h2>
+        <p class="text-sm" style="color:var(--text-2);margin-bottom:1.25rem">L'accès au panel d'administration nécessite une confirmation TOTP. La session sera valide <strong>1 heure</strong>. Un code invalide vous déconnectera.</p>
+        <div id="totp-gate-alert" class="alert alert-hidden" style="margin-bottom:.75rem"></div>
+        <div class="form-group" style="margin-bottom:1rem">
+          <label class="form-label" for="totp-gate-code">Code d'authentification (6 chiffres)</label>
+          <input type="text" id="totp-gate-code" class="form-control" placeholder="123456" maxlength="6" inputmode="numeric" autocomplete="one-time-code" style="letter-spacing:.25em;font-size:1.2rem;text-align:center">
+        </div>
+        <button type="button" class="btn btn-primary btn-block" id="totp-gate-btn">Vérifier</button>
+        <p class="text-sm" style="margin-top:.75rem;color:var(--text-3)">Ouvrez Google Authenticator, Authy ou toute autre application TOTP.</p>
+      </div>
+
+      <!-- Panneau : setup obligatoire (TOTP pas encore configuré) -->
+      <div id="totp-gate-setup" class="hidden">
+        <div id="totp-gate-setup-step1">
+          <div style="text-align:center;margin-bottom:1.25rem">
+            <svg width="36" height="36" fill="none" stroke="#f59e0b" stroke-width="1.5" viewBox="0 0 24 24" style="margin-bottom:.5rem"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+            <h2 style="font-size:1.1rem;font-weight:700;margin-bottom:.4rem">Double authentification obligatoire</h2>
+            <p class="text-sm" style="color:var(--text-2)">L'accès au panel admin exige le 2FA. Configurez-le maintenant — cela prend moins d'une minute.</p>
+          </div>
+          <div id="totp-gate-setup-alert" class="alert alert-hidden" style="margin-bottom:.75rem"></div>
+          <button type="button" class="btn btn-primary btn-block" id="totp-gate-start-setup-btn">Configurer maintenant</button>
+        </div>
+
+        <div id="totp-gate-setup-step2" class="hidden">
+          <p style="font-weight:600;font-size:.9rem;margin-bottom:.5rem">Étape 1 — Scannez le QR code</p>
+          <p class="text-sm" style="color:var(--text-2);margin-bottom:.75rem">Ouvrez votre application d'authentification et scannez le code ci-dessous.</p>
+          <div style="text-align:center;margin-bottom:.75rem">
+            <img id="totp-gate-qr" src="" alt="QR TOTP" style="width:170px;height:170px;border-radius:.5rem;border:1px solid var(--border)">
+          </div>
+          <details style="margin-bottom:.75rem">
+            <summary class="text-sm" style="cursor:pointer;color:var(--text-3)">Entrer la clé manuellement</summary>
+            <div style="margin-top:.4rem;padding:.5rem .6rem;background:var(--bg-2);border-radius:.4rem;border:1px solid var(--border)">
+              <code id="totp-gate-secret" style="font-size:.78rem;word-break:break-all;letter-spacing:.1em"></code>
+            </div>
+          </details>
+          <p style="font-weight:600;font-size:.9rem;margin-bottom:.5rem">Étape 2 — Confirmez avec le premier code</p>
+          <div id="totp-gate-setup-alert2" class="alert alert-hidden" style="margin-bottom:.5rem"></div>
+          <div class="form-group" style="margin-bottom:.75rem">
+            <input type="text" id="totp-gate-setup-code" class="form-control" placeholder="123456" maxlength="6" inputmode="numeric" autocomplete="one-time-code" style="letter-spacing:.2em;font-size:1.1rem;text-align:center">
+          </div>
+          <button type="button" class="btn btn-primary btn-block" id="totp-gate-setup-enable-btn">Activer et accéder au panel</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
   <!-- ── MODAL ÉDITION UTILISATEUR ── -->
   <div id="edit-user-modal" class="modal-overlay hidden">
     <div class="modal-card">
@@ -357,6 +411,17 @@
             <input type="checkbox" id="edit-notify-sms">
             <span>Notifications SMS</span>
           </label>
+        </div>
+
+        <!-- Double authentification -->
+        <div id="edit-totp-row" style="display:none;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem">
+            <div>
+              <div style="font-size:.875rem;font-weight:600">Double authentification (2FA)</div>
+              <div class="form-hint">Désactiver si l'utilisateur a perdu l'accès à son application TOTP.</div>
+            </div>
+            <button type="button" class="btn btn-danger btn-sm" id="edit-totp-disable-btn" style="white-space:nowrap;flex-shrink:0">Désactiver le 2FA</button>
+          </div>
         </div>
       </div>
       <div class="modal-footer">

@@ -1,5 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
+const speakeasy = require('speakeasy');
+const qrcode = require('qrcode');
 const { pool } = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const { encrypt } = require('../services/crypto');
@@ -157,6 +159,113 @@ router.put('/notifications', async (req, res) => {
       'UPDATE users SET phone = COALESCE($1, phone), notify_email = $2, notify_sms = $3 WHERE id = $4',
       [phone || null, !!notify_email, !!notify_sms, req.user.id]
     );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// PUT /api/compte/totp/settings — toggle totp_require_at_login
+router.put('/totp/settings', async (req, res) => {
+  const { require_at_login } = req.body;
+  try {
+    const { rows } = await pool.query('SELECT totp_enabled FROM users WHERE id = $1', [req.user.id]);
+    if (!rows[0]?.totp_enabled) return res.status(400).json({ error: '2FA non activée' });
+    await pool.query('UPDATE users SET totp_require_at_login = $1 WHERE id = $2', [!!require_at_login, req.user.id]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// GET /api/compte/totp/status
+router.get('/totp/status', async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT totp_enabled FROM users WHERE id = $1', [req.user.id]);
+    res.json({ enabled: rows[0]?.totp_enabled ?? false });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// GET /api/compte/totp/setup — generate a new secret and QR code (not yet enabled)
+router.get('/totp/setup', async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT email, totp_enabled FROM users WHERE id = $1', [req.user.id]);
+    const user = rows[0];
+
+    const secret = speakeasy.generateSecret({
+      name: `NotesQC (${user.email})`,
+      issuer: 'NotesQC',
+      length: 20,
+    });
+
+    await pool.query('UPDATE users SET totp_secret = $1 WHERE id = $2', [secret.base32, req.user.id]);
+
+    const qrDataUrl = await qrcode.toDataURL(secret.otpauth_url);
+    res.json({ secret: secret.base32, qr_data_url: qrDataUrl });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST /api/compte/totp/enable — verify code and activate TOTP
+router.post('/totp/enable', async (req, res) => {
+  const { code } = req.body;
+  if (!code) return res.status(400).json({ error: 'Code requis' });
+
+  try {
+    const { rows } = await pool.query('SELECT totp_secret FROM users WHERE id = $1', [req.user.id]);
+    const user = rows[0];
+    if (!user.totp_secret) return res.status(400).json({ error: 'Lancez d\'abord la configuration TOTP' });
+
+    const valid = speakeasy.totp.verify({
+      secret: user.totp_secret,
+      encoding: 'base32',
+      token: String(code).replace(/\s/g, ''),
+      window: 1,
+    });
+    if (!valid) return res.status(400).json({ error: 'Code invalide. Vérifiez l\'heure de votre appareil.' });
+
+    await pool.query('UPDATE users SET totp_enabled = true WHERE id = $1', [req.user.id]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST /api/compte/totp/disable — verify password + TOTP code, then disable
+router.post('/totp/disable', async (req, res) => {
+  const { password, code } = req.body;
+  if (!password) return res.status(400).json({ error: 'Mot de passe requis' });
+
+  try {
+    const { rows } = await pool.query(
+      'SELECT password_hash, totp_secret, totp_enabled FROM users WHERE id = $1',
+      [req.user.id]
+    );
+    const user = rows[0];
+
+    const match = await bcrypt.compare(password, user.password_hash);
+    if (!match) return res.status(401).json({ error: 'Mot de passe incorrect' });
+
+    if (user.totp_enabled) {
+      if (!code) return res.status(400).json({ error: 'Code TOTP requis' });
+      const valid = speakeasy.totp.verify({
+        secret: user.totp_secret,
+        encoding: 'base32',
+        token: String(code).replace(/\s/g, ''),
+        window: 1,
+      });
+      if (!valid) return res.status(400).json({ error: 'Code TOTP invalide' });
+    }
+
+    await pool.query('UPDATE users SET totp_enabled = false, totp_secret = NULL WHERE id = $1', [req.user.id]);
     res.json({ ok: true });
   } catch (err) {
     console.error(err);

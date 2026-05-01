@@ -1,6 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const speakeasy = require('speakeasy');
 const { pool } = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const { sendPasswordResetEmail } = require('../services/notifications/email');
@@ -71,12 +72,12 @@ router.post('/register', async (req, res) => {
 
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, totp_code } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Courriel et mot de passe requis' });
 
   try {
     const { rows } = await pool.query(
-      'SELECT id, email, password_hash, onboarding_step, onboarding_completed, is_admin, role FROM users WHERE email = $1',
+      'SELECT id, email, password_hash, onboarding_step, onboarding_completed, is_admin, role, totp_enabled, totp_secret, totp_require_at_login FROM users WHERE email = $1',
       [email.toLowerCase().trim()]
     );
     const user = rows[0];
@@ -85,7 +86,28 @@ router.post('/login', async (req, res) => {
     const match = await bcrypt.compare(password, user.password_hash);
     if (!match) return res.status(401).json({ error: 'Identifiants incorrects' });
 
-    const { password_hash, ...safeUser } = user;
+    const isAdmin = user.role === 'superadmin' || user.is_admin;
+    // Admins bypass login TOTP by default; the panel gate handles it.
+    // If totp_require_at_login is set, admins are also challenged at login.
+    if (user.totp_enabled && (!isAdmin || user.totp_require_at_login)) {
+      if (!totp_code) {
+        return res.json({ totp_required: true });
+      }
+      const valid = speakeasy.totp.verify({
+        secret: user.totp_secret,
+        encoding: 'base32',
+        token: String(totp_code).replace(/\s/g, ''),
+        window: 1,
+      });
+      if (!valid) return res.status(401).json({ error: 'Code TOTP invalide' });
+    }
+
+    // Reset admin elevation on every new login — forces re-verification at the panel
+    if (isAdmin) {
+      await pool.query('UPDATE users SET admin_totp_verified_at = NULL WHERE id = $1', [user.id]);
+    }
+
+    const { password_hash, totp_secret, totp_enabled, ...safeUser } = user;
     res.json({ token: signToken(user.id, user.email, user.is_admin, user.role), user: safeUser });
   } catch (err) {
     console.error(err);
@@ -97,7 +119,7 @@ router.post('/login', async (req, res) => {
 router.get('/me', requireAuth, async (req, res) => {
   try {
     const { rows } = await pool.query(
-      'SELECT id, email, recovery_email, phone, notify_email, notify_sms, onboarding_step, onboarding_completed, is_admin, role, created_at, full_name, permanent_code FROM users WHERE id = $1',
+      'SELECT id, email, recovery_email, phone, notify_email, notify_sms, onboarding_step, onboarding_completed, is_admin, role, created_at, full_name, permanent_code, totp_enabled, totp_require_at_login FROM users WHERE id = $1',
       [req.user.id]
     );
     if (!rows[0]) return res.status(404).json({ error: 'Utilisateur introuvable' });

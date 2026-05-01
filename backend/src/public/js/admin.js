@@ -1,5 +1,151 @@
 const ALL_TABS = ['monitoring', 'users', 'tests', 'config', 'deploy', 'todo'];
 
+// ── Gate TOTP admin ──────────────────────────────────────────────────────────
+
+function showTotpGate(panel) {
+  const overlay = document.getElementById('totp-gate-overlay');
+  document.getElementById('totp-gate-verify').classList.toggle('hidden', panel !== 'verify');
+  document.getElementById('totp-gate-setup').classList.toggle('hidden', panel !== 'setup');
+  overlay.classList.remove('hidden');
+  overlay.style.display = 'flex';
+}
+
+function hideTotpGate() {
+  const overlay = document.getElementById('totp-gate-overlay');
+  overlay.classList.add('hidden');
+  overlay.style.display = '';
+}
+
+// Élève la session avec un code TOTP. Mauvais code → 401 → API auto-logout → retour login.
+function promiseElevate(alertEl, onSuccess) {
+  const btn = document.getElementById('totp-gate-btn');
+  const input = document.getElementById('totp-gate-code');
+
+  // Clone le bouton pour repartir d'un état propre (pas de listeners dupliqués)
+  const freshBtn = btn.cloneNode(true);
+  btn.parentNode.replaceChild(freshBtn, btn);
+
+  async function tryElevate() {
+    const code = input.value.trim();
+    hideAlert(alertEl);
+    if (!code) { showAlert(alertEl, 'Entrez le code TOTP.'); return; }
+
+    setLoading(freshBtn, true, 'Vérification…');
+    const res = await API.request('POST', '/admin/totp-elevation', { code });
+    // res === null → API a auto-logouté sur 401 (mauvais code) → redirect vers '/'
+    setLoading(freshBtn, false, 'Vérifier');
+    if (!res) return;
+
+    const result = await res.json();
+    if (res.ok) {
+      hideTotpGate();
+      if (result.expires_at) scheduleElevationExpiry(result.expires_at);
+      onSuccess();
+    }
+    // Pas d'affichage d'erreur ici : un 401 déclenche déjà l'auto-logout
+  }
+
+  freshBtn.addEventListener('click', tryElevate);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') tryElevate(); });
+  input.value = '';
+  input.focus();
+}
+
+function scheduleElevationExpiry(expiresAt) {
+  const ms = new Date(expiresAt).getTime() - Date.now();
+  if (ms <= 0) return;
+  setTimeout(() => {
+    showTotpGate('verify');
+    const alertEl = document.getElementById('totp-gate-alert');
+    showAlert(alertEl, 'Session admin expirée. Entrez votre code TOTP pour continuer.', 'error');
+    promiseElevate(alertEl, () => { /* page continue normalement */ });
+  }, ms);
+}
+
+async function checkTotpElevation() {
+  const data = await API.get('/admin/totp-elevation');
+  if (!data) return false; // erreur réseau ou auto-logout
+
+  // Cas 1 : TOTP déjà validé et non expiré
+  if (data.totp_configured && data.elevated) {
+    if (data.expires_at) scheduleElevationExpiry(data.expires_at);
+    return true;
+  }
+
+  // Cas 2 : TOTP configuré mais session non élevée → panneau de vérification
+  if (data.totp_configured && !data.elevated) {
+    showTotpGate('verify');
+    return new Promise(resolve => {
+      const alertEl = document.getElementById('totp-gate-alert');
+      promiseElevate(alertEl, () => resolve(true));
+    });
+  }
+
+  // Cas 3 : TOTP non configuré → wizard de setup obligatoire
+  showTotpGate('setup');
+  return new Promise(resolve => {
+    const setupAlert = document.getElementById('totp-gate-setup-alert');
+    const setupAlert2 = document.getElementById('totp-gate-setup-alert2');
+    const startBtn = document.getElementById('totp-gate-start-setup-btn');
+
+    // Étape 1 : clic sur "Configurer maintenant"
+    startBtn.addEventListener('click', async () => {
+      hideAlert(setupAlert);
+      setLoading(startBtn, true, 'Génération…');
+      const setupData = await API.get('/compte/totp/setup');
+      setLoading(startBtn, false, 'Configurer maintenant');
+
+      if (!setupData || setupData.error) {
+        showAlert(setupAlert, setupData?.error || 'Erreur de génération');
+        return;
+      }
+
+      document.getElementById('totp-gate-qr').src = setupData.qr_data_url;
+      document.getElementById('totp-gate-secret').textContent =
+        setupData.secret.match(/.{1,4}/g).join(' ');
+      document.getElementById('totp-gate-setup-step1').classList.add('hidden');
+      document.getElementById('totp-gate-setup-step2').classList.remove('hidden');
+      document.getElementById('totp-gate-setup-code').value = '';
+      document.getElementById('totp-gate-setup-code').focus();
+    });
+
+    // Étape 2 : activer et élever en une seule action
+    const enableBtn = document.getElementById('totp-gate-setup-enable-btn');
+    enableBtn.addEventListener('click', async () => {
+      const code = document.getElementById('totp-gate-setup-code').value.trim();
+      hideAlert(setupAlert2);
+      if (!code) { showAlert(setupAlert2, 'Entrez le code de votre application.'); return; }
+
+      setLoading(enableBtn, true, 'Activation…');
+      const enableRes = await API.request('POST', '/compte/totp/enable', { code });
+      if (!enableRes) { setLoading(enableBtn, false, 'Activer et accéder au panel'); return; }
+      const enableData = await enableRes.json();
+
+      if (!enableRes.ok) {
+        setLoading(enableBtn, false, 'Activer et accéder au panel');
+        showAlert(setupAlert2, enableData.error || 'Code invalide');
+        return;
+      }
+
+      // TOTP activé → élever immédiatement avec le même code
+      const elevRes = await API.request('POST', '/admin/totp-elevation', { code });
+      setLoading(enableBtn, false, 'Activer et accéder au panel');
+      if (!elevRes) return; // 401 → auto-logout
+
+      const elevData = await elevRes.json();
+      if (elevRes.ok) {
+        hideTotpGate();
+        if (elevData.expires_at) scheduleElevationExpiry(elevData.expires_at);
+        resolve(true);
+      } else {
+        // Le code TOTP vient d'être validé lors de l'enable, un échec ici est improbable
+        showAlert(setupAlert2, elevData.error || 'Erreur d\'élévation');
+      }
+    });
+  });
+}
+// ── Fin gate TOTP ────────────────────────────────────────────────────────────
+
 document.addEventListener('DOMContentLoaded', async () => {
   const user = await API.requireAuth();
   if (!user) return;
@@ -8,6 +154,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
   setupNav(user);
+
+  const elevated = await checkTotpElevation();
+  if (!elevated) return;
 
   const isSuperAdmin = user.role === 'superadmin';
   _isSuperAdminView = isSuperAdmin;
@@ -674,6 +823,35 @@ async function openEditModal(userId) {
   document.getElementById('edit-notify-email').checked = !!user.notify_email;
   document.getElementById('edit-notify-sms').checked = !!user.notify_sms;
   hideAlert(document.getElementById('edit-modal-alert'));
+
+  // Bouton TOTP — visible seulement si l'utilisateur a le 2FA activé
+  const totpRow = document.getElementById('edit-totp-row');
+  const totpBtn = document.getElementById('edit-totp-disable-btn');
+  if (user.totp_enabled) {
+    totpRow.style.display = '';
+    const freshBtn = totpBtn.cloneNode(true);
+    totpBtn.parentNode.replaceChild(freshBtn, totpBtn);
+    freshBtn.addEventListener('click', async () => {
+      if (!confirm(`Désactiver le 2FA de ${user.full_name || user.email} ? L'utilisateur pourra se connecter sans code TOTP.`)) return;
+      const alertEl = document.getElementById('edit-modal-alert');
+      setLoading(freshBtn, true, 'Désactivation…');
+      const res = await API.request('DELETE', `/admin/users/${user.id}/totp`, {});
+      setLoading(freshBtn, false, 'Désactiver le 2FA');
+      if (!res) return;
+      const data = await res.json();
+      if (res.ok) {
+        totpRow.style.display = 'none';
+        // Mettre à jour le cache local
+        const cached = _usersCache.find(u => u.id === user.id);
+        if (cached) cached.totp_enabled = false;
+        showAlert(alertEl, '2FA désactivé — l\'utilisateur peut maintenant se connecter sans code TOTP.', 'success');
+      } else {
+        showAlert(alertEl, data.error || 'Erreur lors de la désactivation');
+      }
+    });
+  } else {
+    totpRow.style.display = 'none';
+  }
 
   // Display name hint in photo section
   document.getElementById('edit-user-name-display').textContent = user.full_name || user.email;

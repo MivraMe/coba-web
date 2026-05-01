@@ -11,8 +11,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with th
 - **Runtime**: Node.js (CommonJS, no build step)
 - **Framework**: Express 4
 - **Database**: PostgreSQL 16 via `pg` (Pool with `DATABASE_URL`)
-- **Auth**: JWT (7-day tokens, `Bearer` header), bcrypt (12 rounds)
+- **Auth**: JWT (7-day tokens, `Bearer` header), bcrypt (12 rounds), TOTP 2FA via `speakeasy`
 - **Encryption**: AES-256-CBC for portal passwords (`ENCRYPTION_KEY` must be 64 hex chars)
+- **2FA**: `speakeasy` (TOTP generation/verification) + `qrcode` (QR code data URLs)
 - **Notifications**: Resend (email), Twilio (SMS)
 - **Scheduler**: `node-cron` — runs `runScheduledRefresh` on a configurable interval
 - **Frontend**: Vanilla JS + HTML served as static files from `backend/src/public/`
@@ -34,7 +35,7 @@ backend/
       onboarding.js   # /api/onboarding — 5-step wizard (portal creds → photo → courses → notifs → done)
       dashboard.js    # /api/dashboard — grades, averages, chart data
       groups.js       # /api/groupes — group membership, invitations
-      account.js      # /api/compte — profile, password, photo, notification prefs
+      account.js      # /api/compte — profile, password, photo, notification prefs, TOTP setup/enable/disable
       invitations.js  # /api/invitations — group invite links
       admin.js        # /api/admin — stats, users, sync, config, deploy, todo
     services/
@@ -96,6 +97,10 @@ Photos are stored as raw base64 (no `data:image/...;base64,` prefix) in `users.p
 ### Role system
 Three levels encoded in the JWT payload: `user` (default), `is_admin: true` (group admin, set per-user), `role: 'superadmin'` (full access). The `requireAdmin` middleware passes either `is_admin` OR `superadmin`; `requireSuperAdmin` is for destructive/config routes only. `requireRegularUser` blocks superadmins from data routes.
 
+`requireAdmin` does a DB fallback when the JWT is stale (e.g. user promoted after login): if the JWT doesn't grant access it runs a single `SELECT is_admin, role` query and patches `req.user` so downstream middleware sees correct values.
+
+Superadmin accounts have no access to `/compte` — their TOTP setup is done inline in the admin panel gate.
+
 ### Scheduler
 `REFRESH_INTERVAL_MINUTES` (default 5) drives the cron job. Each tick picks **one member per group** (least-recently-synced) to fetch grades for; if new grades are detected, all group members are synced and notified. Interval can be changed at runtime via `POST /api/admin/config` without restart.
 
@@ -107,14 +112,34 @@ If `ADMIN_EMAIL` + `ADMIN_PASSWORD` env vars are set, `ensureSuperAdmin()` creat
 
 ### Admin panel
 - **User list**: shows avatar (real photo if available, else colored initials), full name, email, group badges in a 3-column grid (max 9 visible, then `+N`)
-- **Edit modal** (superadmin): full crop tool for the user's photo, editable `full_name`; photo only sent in PATCH if modified (`changed` flag)
+- **Edit modal** (superadmin): full crop tool for the user's photo, editable `full_name`; photo only sent in PATCH if modified (`changed` flag). Shows a "Désactiver le 2FA" danger button when the user has TOTP enabled — calls `DELETE /api/admin/users/:id/totp`
 - **Portal test section**: endpoint selector (`/notes`, `/profile`, `/onboarding`, `/health`); profile/onboarding responses show a profile card; `photo_base64` is replaced with `[base64 X KB]` in the raw JSON output
 - Admin routes that touch photos: `GET /api/admin/users/:id/photo` (superadmin), `PATCH /api/admin/users/:id` accepts `full_name` and `photo_base64`
+
+### TOTP two-factor authentication
+
+**Columns on `users`**: `totp_secret`, `totp_enabled` (default `false`), `totp_require_at_login` (default `false`), `admin_totp_verified_at`.
+
+**Regular users** — opt-in via Mon compte → Double authentification section. When enabled, TOTP is always required at login. No option to bypass.
+
+**Admin users** — TOTP at login is optional (controlled by `totp_require_at_login` checkbox in Mon compte, visible to admins only). Regardless of that setting, **TOTP is mandatory to access the admin panel**:
+- `GET /api/admin/totp-elevation` — returns `{ totp_configured, elevated, expires_at }`. This endpoint sits **before** the gate middleware so it's always accessible.
+- `POST /api/admin/totp-elevation` — verifies code, sets `admin_totp_verified_at = NOW()`. Wrong code → 401 → `api.js` auto-logouts the user (redirect to login).
+- Gate middleware runs after the two elevation endpoints: if `totp_enabled` but not elevated → 403 `{ totp_elevation_required: true }`; if `!totp_enabled` → 403 `{ totp_setup_required: true }`.
+- Elevation validity: `admin_totp_verified_at > JWT.iat` (must be from the current session) AND within 1 hour. On every admin login, `admin_totp_verified_at` is reset to `NULL` so re-verification is always required.
+
+**Superadmin** — no access to `/compte`, so TOTP setup is done inline in the admin panel gate overlay (QR wizard). The same code that activates TOTP immediately elevates the session.
+
+**Admin gate frontend** (`admin.js`): `checkTotpElevation()` runs before any panel data loads. Three states: `totp_configured=false` → setup wizard; `elevated=false` → verify panel; `elevated=true` → pass through + schedule 1h expiry timer.
+
+**Superadmin: disable user TOTP**: `DELETE /api/admin/users/:id/totp` resets all TOTP columns. Accessible via the edit modal in the user list.
 
 ### Frontend
 Plain HTML pages + vanilla JS in `public/`. `public/js/api.js` is a shared fetch wrapper that attaches the JWT from `localStorage`. No bundler — all scripts are loaded with `<script>` tags. Pages map 1:1 to routes in `index.js`.
 
 `setupNav(user)` in `api.js` displays `user.full_name || user.email` in the navbar.
+
+`api.js` auto-logouts on any 401 response when a token exists (`if (res.status === 401 && getToken()) logout()`). This is intentionally used by the TOTP elevation endpoint to redirect admins to login on wrong code.
 
 ## Required Environment Variables
 
