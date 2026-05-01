@@ -706,3 +706,10 @@ tr:hover td { background: var(--bg); }
 @media (max-width: 480px) {
   .photo-compte-wrap { flex-direction: column; align-items: flex-start; }
 }
+
+/* ── Portal endpoint selector ───────────────────────────────────────────── */
+.portal-ep-btn.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}

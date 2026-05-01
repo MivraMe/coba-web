@@ -9,7 +9,7 @@ const { getSchedulerStatus, restartScheduler } = require('../services/scheduler'
 const { syncUserData, runScheduledRefresh } = require('../services/dataSync');
 const { sendNewGradeEmail, sendAdminMessage } = require('../services/notifications/email');
 const { sendSms } = require('../services/notifications/sms');
-const { fetchNotes } = require('../services/portalApi');
+const { fetchNotes, fetchProfile, fetchOnboarding, testHealth } = require('../services/portalApi');
 const { encrypt } = require('../services/crypto');
 
 const router = express.Router();
@@ -485,15 +485,25 @@ router.post('/test/sync', async (req, res) => {
 
 // POST /api/admin/test/portal
 router.post('/test/portal', async (req, res) => {
-  const { portal_username, portal_password } = req.body;
+  const { portal_username, portal_password, endpoint = 'notes' } = req.body;
   if (!portal_username || !portal_password) {
     return res.status(400).json({ error: 'portal_username et portal_password requis' });
   }
   try {
-    const data = await fetchNotes(portal_username, portal_password);
-    res.json({ ok: true, data });
+    let data;
+    if (endpoint === 'health') {
+      const ok = await testHealth(portal_username, portal_password);
+      data = { status: ok ? 'ok' : 'error' };
+    } else if (endpoint === 'profile') {
+      data = await fetchProfile(portal_username, portal_password);
+    } else if (endpoint === 'onboarding') {
+      data = await fetchOnboarding(portal_username, portal_password);
+    } else {
+      data = await fetchNotes(portal_username, portal_password);
+    }
+    res.json({ ok: true, endpoint, data });
   } catch (err) {
-    res.json({ ok: false, error: err.message, code: err.code });
+    res.json({ ok: false, endpoint, error: err.message, code: err.code });
   }
 });
 

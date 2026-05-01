@@ -71,6 +71,12 @@ async function fetchProfileForUser(user) {
   return fetchProfile(user.portal_username, password);
 }
 
+async function fetchOnboarding(username, password) {
+  const res = await makeRequest(username, password, '/onboarding');
+  if (!res.ok) throw new Error(`Erreur HTTP ${res.status}`);
+  return res.json();
+}
+
 function parseResult(result) {
   if (!result) return { score_obtained: null, score_max: null, percentage: null };
   const match = result.match(/^([\d,]+)\s*\/\s*([\d,]+)\s*\(([\d,]+)\s*%\)/);
@@ -174,6 +180,7 @@ module.exports = {
   fetchNotesForUser,
   fetchProfile,
   fetchProfileForUser,
+  fetchOnboarding,
   parseAssignment,
   parseCourse,
   getSchoolYear,

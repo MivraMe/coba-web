@@ -52,6 +52,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('notif-test-btn').addEventListener('click', handleNotifTest);
   document.getElementById('sync-test-btn').addEventListener('click', handleSyncTest);
   document.getElementById('portal-test-btn').addEventListener('click', handlePortalTest);
+  initPortalEndpointBtns();
 
   // TODO filter buttons (visible to all admins)
   document.querySelectorAll('[data-todo-filter]').forEach(btn => {
@@ -574,15 +575,31 @@ async function handleSyncTest() {
   }
 }
 
+let _portalTestEndpoint = 'notes';
+
+function initPortalEndpointBtns() {
+  document.querySelectorAll('.portal-ep-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.portal-ep-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      _portalTestEndpoint = btn.dataset.ep;
+    });
+  });
+}
+
 async function handlePortalTest() {
   const alertEl = document.getElementById('portal-test-alert');
+  const resultEl = document.getElementById('portal-test-result');
   const output = document.getElementById('portal-test-output');
+  const profileCard = document.getElementById('portal-test-profile-card');
   hideAlert(alertEl);
-  output.classList.add('hidden');
+  resultEl.classList.add('hidden');
+  profileCard.classList.add('hidden');
 
   const username = document.getElementById('portal-test-user').value.trim();
   const password = document.getElementById('portal-test-pass').value;
   const btn = document.getElementById('portal-test-btn');
+  const ep = _portalTestEndpoint;
 
   if (!username || !password) {
     showAlert(alertEl, 'Identifiant et mot de passe requis.');
@@ -590,20 +607,49 @@ async function handlePortalTest() {
   }
 
   setLoading(btn, true, 'Test…');
-  const res = await API.request('POST', '/admin/test/portal', { portal_username: username, portal_password: password });
+  const res = await API.request('POST', '/admin/test/portal', { portal_username: username, portal_password: password, endpoint: ep });
   setLoading(btn, false);
   const data = res ? await res.json() : null;
 
-  if (data && data.ok) {
-    showAlert(alertEl, 'Connexion réussie.', 'success');
-    output.textContent = JSON.stringify(data.data, null, 2);
-    output.classList.remove('hidden');
-  } else {
+  if (!data || !data.ok) {
     const msg = data?.error || 'Erreur inconnue';
     const code = data?.code ? ` [${data.code}]` : '';
     showAlert(alertEl, msg + code);
-    output.classList.add('hidden');
+    return;
   }
+
+  showAlert(alertEl, `/${ep} — réponse reçue.`, 'success');
+  resultEl.classList.remove('hidden');
+
+  // For profile / onboarding: show profile card + sanitized JSON (hide raw photo)
+  const profile = ep === 'profile' ? data.data
+    : ep === 'onboarding' ? data.data?.profile
+    : null;
+
+  if (profile) {
+    const photoEl = document.getElementById('portal-test-photo');
+    const noPhotoEl = document.getElementById('portal-test-no-photo');
+    document.getElementById('portal-test-name').textContent = profile.full_name || '—';
+    document.getElementById('portal-test-code').textContent = profile.permanent_code || '';
+    if (profile.photo_base64) {
+      const src = profile.photo_base64.startsWith('data:') ? profile.photo_base64 : `data:image/jpeg;base64,${profile.photo_base64}`;
+      photoEl.src = src;
+      photoEl.style.display = 'block';
+      noPhotoEl.style.display = 'none';
+    } else {
+      photoEl.style.display = 'none';
+      noPhotoEl.style.display = 'flex';
+    }
+    profileCard.style.display = 'flex';
+    profileCard.classList.remove('hidden');
+  }
+
+  // Sanitize photo from JSON output (too large to display raw)
+  const sanitized = JSON.parse(JSON.stringify(data.data));
+  if (ep === 'profile' && sanitized.photo_base64) sanitized.photo_base64 = `[base64 ${Math.round(sanitized.photo_base64.length * 0.75 / 1024)} KB]`;
+  if (ep === 'onboarding' && sanitized.profile?.photo_base64) sanitized.profile.photo_base64 = `[base64 ${Math.round(sanitized.profile.photo_base64.length * 0.75 / 1024)} KB]`;
+
+  output.textContent = JSON.stringify(sanitized, null, 2);
 }
 
 // ── MODAL ÉDITION UTILISATEUR ─────────────────────────────────────────────────
