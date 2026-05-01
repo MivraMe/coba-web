@@ -379,8 +379,8 @@ function renderUsersTable(users) {
       ? `<span style="display:block;color:var(--text-3);font-size:.75rem">Dernière synchro</span>${new Date(u.last_synced).toLocaleString('fr-CA', { dateStyle: 'short', timeStyle: 'short' })}`
       : '—';
     const groups = u.groups.length > 0
-      ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:.2rem">${
-          u.groups.map(g => `<span class="badge badge-neutral" title="${escapeHtml(g.course_name)}">${escapeHtml(g.course_code)}</span>`).join('')
+      ? `<div style="display:flex;flex-wrap:wrap;gap:.2rem">${
+          u.groups.map(g => `<span class="badge badge-neutral" title="${escapeHtml(g.course_name)} (${g.school_year})" style="font-size:.7rem;padding:.15rem .4rem">${escapeHtml(g.course_code)}</span>`).join('')
         }</div>`
       : '<span style="color:var(--text-3)">—</span>';
     const notif = [
