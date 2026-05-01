@@ -34,6 +34,17 @@
         &nbsp;·&nbsp; <a href="#" id="forgot-link">Mot de passe oublié ?</a>
       </p>
 
+      <!-- Étape TOTP -->
+      <div id="totp-section" class="hidden">
+        <p class="text-sm text-muted mb-2" style="text-align:center">Entrez le code à 6 chiffres généré par votre application d'authentification.</p>
+        <div class="form-group">
+          <label class="form-label" for="totp-code">Code d'authentification</label>
+          <input type="text" id="totp-code" class="form-control" placeholder="123456" maxlength="6" inputmode="numeric" autocomplete="one-time-code" style="letter-spacing:.25em;font-size:1.15rem;text-align:center">
+        </div>
+        <button type="button" class="btn btn-primary btn-block" id="totp-submit-btn">Vérifier</button>
+        <p class="text-center mt-1 text-sm"><a href="#" id="totp-back-link">← Retour à la connexion</a></p>
+      </div>
+
       <!-- Réinitialisation de mot de passe -->
       <div id="reset-section" class="hidden">
         <div id="reset-step-email">

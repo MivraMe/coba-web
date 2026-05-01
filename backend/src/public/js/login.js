@@ -4,10 +4,50 @@ document.addEventListener('DOMContentLoaded', async () => {
   const form = document.getElementById('login-form');
   const alert = document.getElementById('alert');
   const btn = document.getElementById('submit-btn');
+  const totpSection = document.getElementById('totp-section');
+  const loginFooter = document.getElementById('login-footer');
+
+  let pendingEmail = '';
+  let pendingPassword = '';
 
   ['email', 'password'].forEach(id => {
     form[id].addEventListener('input', () => hideAlert(alert));
   });
+
+  function showTotpChallenge() {
+    form.classList.add('hidden');
+    loginFooter.classList.add('hidden');
+    totpSection.classList.remove('hidden');
+    hideAlert(alert);
+    document.getElementById('totp-code').value = '';
+    document.getElementById('totp-code').focus();
+  }
+
+  function showLoginForm() {
+    totpSection.classList.add('hidden');
+    form.classList.remove('hidden');
+    loginFooter.classList.remove('hidden');
+    hideAlert(alert);
+  }
+
+  document.getElementById('totp-back-link').addEventListener('click', (e) => {
+    e.preventDefault();
+    pendingEmail = '';
+    pendingPassword = '';
+    showLoginForm();
+  });
+
+  async function finishLogin(data) {
+    API.setToken(data.token);
+    API.setUser(data.user);
+    if (data.user.role === 'superadmin') {
+      window.location.href = '/admin';
+    } else if (data.user.onboarding_completed) {
+      window.location.href = '/dashboard';
+    } else {
+      window.location.href = '/onboarding';
+    }
+  }
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -28,16 +68,42 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    API.setToken(data.token);
-    API.setUser(data.user);
-
-    if (data.user.role === 'superadmin') {
-      window.location.href = '/admin';
-    } else if (data.user.onboarding_completed) {
-      window.location.href = '/dashboard';
-    } else {
-      window.location.href = '/onboarding';
+    if (data.totp_required) {
+      pendingEmail = form.email.value;
+      pendingPassword = form.password.value;
+      showTotpChallenge();
+      return;
     }
+
+    await finishLogin(data);
+  });
+
+  const totpSubmitBtn = document.getElementById('totp-submit-btn');
+  document.getElementById('totp-code').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') totpSubmitBtn.click();
+  });
+
+  totpSubmitBtn.addEventListener('click', async () => {
+    const code = document.getElementById('totp-code').value.trim();
+    hideAlert(alert);
+    if (!code) { showAlert(alert, 'Entrez le code TOTP.'); return; }
+
+    setLoading(totpSubmitBtn, true, 'Vérification…');
+    const res = await API.request('POST', '/auth/login', {
+      email: pendingEmail,
+      password: pendingPassword,
+      totp_code: code,
+    });
+    setLoading(totpSubmitBtn, false, 'Vérifier');
+    if (!res) return;
+
+    const data = await res.json();
+    if (!res.ok) {
+      showAlert(alert, data.error || 'Code invalide');
+      return;
+    }
+
+    await finishLogin(data);
   });
 
   // ── Réinitialisation de mot de passe ────────────────────────────────────────
