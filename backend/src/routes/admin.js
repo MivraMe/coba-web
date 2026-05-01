@@ -277,7 +277,7 @@ router.get('/users', async (req, res) => {
   try {
     const { rows: users } = await pool.query(`
       SELECT u.id, u.email, u.full_name, u.permanent_code, u.photo_base64, u.created_at, u.is_admin, u.role,
-             u.notify_email, u.notify_sms, u.phone, u.portal_username,
+             u.notify_email, u.notify_sms, u.phone, u.portal_username, u.totp_enabled,
              (SELECT email FROM users WHERE id = u.invited_by_user_id) AS invited_by_email,
              MAX(gm.refreshed_at) AS last_synced
       FROM users u
@@ -415,6 +415,21 @@ router.post('/users/:id/contact', async (req, res) => {
       }
     }
     res.json({ ok: true, results });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// DELETE /api/admin/users/:id/totp  (superadmin only) — disable TOTP for a locked-out user
+router.delete('/users/:id/totp', requireSuperAdmin, async (req, res) => {
+  try {
+    const { rowCount } = await pool.query(
+      'UPDATE users SET totp_enabled = false, totp_secret = NULL, totp_require_at_login = false, admin_totp_verified_at = NULL WHERE id = $1',
+      [req.params.id]
+    );
+    if (rowCount === 0) return res.status(404).json({ error: 'Utilisateur introuvable' });
+    res.json({ ok: true });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Erreur serveur' });

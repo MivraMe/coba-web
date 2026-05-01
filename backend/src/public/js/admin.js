@@ -824,6 +824,35 @@ async function openEditModal(userId) {
   document.getElementById('edit-notify-sms').checked = !!user.notify_sms;
   hideAlert(document.getElementById('edit-modal-alert'));
 
+  // Bouton TOTP — visible seulement si l'utilisateur a le 2FA activé
+  const totpRow = document.getElementById('edit-totp-row');
+  const totpBtn = document.getElementById('edit-totp-disable-btn');
+  if (user.totp_enabled) {
+    totpRow.style.display = '';
+    const freshBtn = totpBtn.cloneNode(true);
+    totpBtn.parentNode.replaceChild(freshBtn, totpBtn);
+    freshBtn.addEventListener('click', async () => {
+      if (!confirm(`Désactiver le 2FA de ${user.full_name || user.email} ? L'utilisateur pourra se connecter sans code TOTP.`)) return;
+      const alertEl = document.getElementById('edit-modal-alert');
+      setLoading(freshBtn, true, 'Désactivation…');
+      const res = await API.request('DELETE', `/admin/users/${user.id}/totp`, {});
+      setLoading(freshBtn, false, 'Désactiver le 2FA');
+      if (!res) return;
+      const data = await res.json();
+      if (res.ok) {
+        totpRow.style.display = 'none';
+        // Mettre à jour le cache local
+        const cached = _usersCache.find(u => u.id === user.id);
+        if (cached) cached.totp_enabled = false;
+        showAlert(alertEl, '2FA désactivé — l\'utilisateur peut maintenant se connecter sans code TOTP.', 'success');
+      } else {
+        showAlert(alertEl, data.error || 'Erreur lors de la désactivation');
+      }
+    });
+  } else {
+    totpRow.style.display = 'none';
+  }
+
   // Display name hint in photo section
   document.getElementById('edit-user-name-display').textContent = user.full_name || user.email;
 

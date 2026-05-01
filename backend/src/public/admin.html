@@ -412,6 +412,17 @@
             <span>Notifications SMS</span>
           </label>
         </div>
+
+        <!-- Double authentification -->
+        <div id="edit-totp-row" style="display:none;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem">
+            <div>
+              <div style="font-size:.875rem;font-weight:600">Double authentification (2FA)</div>
+              <div class="form-hint">Désactiver si l'utilisateur a perdu l'accès à son application TOTP.</div>
+            </div>
+            <button type="button" class="btn btn-danger btn-sm" id="edit-totp-disable-btn" style="white-space:nowrap;flex-shrink:0">Désactiver le 2FA</button>
+          </div>
+        </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" id="edit-modal-cancel">Annuler</button>
