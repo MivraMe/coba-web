@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt');
 const { pool } = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const { encrypt } = require('../services/crypto');
-const { fetchNotes, fetchProfile } = require('../services/portalApi');
+const { fetchNotes, fetchProfile, fetchProfileForUser } = require('../services/portalApi');
 const { processAssignments } = require('../services/dataSync');
 
 const router = express.Router();
@@ -57,6 +57,26 @@ router.put('/mot-de-passe', async (req, res) => {
     await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, req.user.id]);
     res.json({ ok: true });
   } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// GET /api/compte/portail-photo — fetch live photo from portal
+router.get('/portail-photo', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      'SELECT portal_username, portal_password_encrypted FROM users WHERE id = $1',
+      [req.user.id]
+    );
+    const user = rows[0];
+    if (!user?.portal_username || !user?.portal_password_encrypted) {
+      return res.status(400).json({ error: 'Identifiants du portail non configurés' });
+    }
+    const profile = await fetchProfileForUser(user);
+    res.json({ photo_base64: profile.photo_base64 || null });
+  } catch (err) {
+    if (err.code) return res.status(503).json({ error: err.message, code: err.code });
     console.error(err);
     res.status(500).json({ error: 'Erreur serveur' });
   }

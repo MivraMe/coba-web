@@ -161,8 +161,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     reader.readAsDataURL(file);
   });
 
-  document.getElementById('btn-use-portal-photo').addEventListener('click', () => {
-    if (acCrop.portalBase64) acInitCrop(acCrop.portalBase64);
+  document.getElementById('btn-use-portal-photo').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-use-portal-photo');
+    setLoading(btn, true, 'Chargement…');
+    const data = await API.get('/compte/portail-photo');
+    setLoading(btn, false);
+    if (data?.photo_base64) {
+      acInitCrop(data.photo_base64);
+    } else {
+      showAlert(document.getElementById('alert-photo'), data?.error || 'Aucune photo disponible sur le portail');
+    }
   });
 
   document.getElementById('btn-remove-photo').addEventListener('click', () => {

@@ -419,10 +419,13 @@ function renderUsersTable(users) {
 
     const initials = avatarInitials(u.full_name, u.email);
     const avatarBg = avatarColor(u.email);
+    const avatarHtml = u.photo_base64
+      ? `<img src="data:image/jpeg;base64,${u.photo_base64}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;flex-shrink:0;display:block" alt="">`
+      : `<div style="width:34px;height:34px;border-radius:50%;background:${avatarBg};color:#fff;font-size:.72rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;user-select:none">${escapeHtml(initials)}</div>`;
     return `<tr>
       <td>
         <div style="display:flex;align-items:center;gap:.6rem">
-          <div style="width:34px;height:34px;border-radius:50%;background:${avatarBg};color:#fff;font-size:.72rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;user-select:none">${escapeHtml(initials)}</div>
+          ${avatarHtml}
           <div style="min-width:0">
             ${u.full_name ? `<div style="font-weight:600;font-size:.85rem;line-height:1.2">${escapeHtml(u.full_name)}</div>` : ''}
             <div style="font-size:.78rem;color:var(--text-3)">${escapeHtml(u.email)}</div>
