@@ -440,7 +440,7 @@ function renderUsersTable(users) {
       </td>
       <td style="font-size:.8rem;white-space:nowrap">${created}</td>
       <td style="font-size:.8rem">${synced}</td>
-      <td style="font-size:.8rem">${groups}</td>
+      <td style="font-size:.8rem;max-width:160px;overflow:hidden">${groups}</td>
       <td style="font-size:.85rem">${notif}</td>
       <td>${roleBadge}</td>
       <td style="display:flex;gap:.35rem;flex-wrap:wrap">
