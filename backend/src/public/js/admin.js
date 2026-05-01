@@ -378,10 +378,14 @@ function renderUsersTable(users) {
     const synced = u.last_synced
       ? `<span style="display:block;color:var(--text-3);font-size:.75rem">Dernière synchro</span>${new Date(u.last_synced).toLocaleString('fr-CA', { dateStyle: 'short', timeStyle: 'short' })}`
       : '—';
+    const MAX_VISIBLE = 3;
+    const allGroupTitles = u.groups.map(g => `${g.course_code} — ${g.course_name} (${g.school_year})`).join('\n');
+    const visible = u.groups.slice(0, MAX_VISIBLE);
+    const extra = u.groups.length - MAX_VISIBLE;
     const groups = u.groups.length > 0
-      ? `<div style="display:flex;flex-wrap:wrap;gap:.2rem">${
-          u.groups.map(g => `<span class="badge badge-neutral" title="${escapeHtml(g.course_name)} (${g.school_year})" style="font-size:.7rem;padding:.15rem .4rem">${escapeHtml(g.course_code)}</span>`).join('')
-        }</div>`
+      ? `<div style="display:flex;flex-wrap:nowrap;gap:.2rem;align-items:center;overflow:hidden" title="${escapeHtml(allGroupTitles)}">${
+          visible.map(g => `<span class="badge badge-neutral" style="font-size:.7rem;padding:.15rem .4rem;white-space:nowrap">${escapeHtml(g.course_code)}</span>`).join('')
+        }${extra > 0 ? `<span class="badge badge-neutral" style="font-size:.7rem;padding:.15rem .4rem;white-space:nowrap;flex-shrink:0">+${extra}</span>` : ''}</div>`
       : '<span style="color:var(--text-3)">—</span>';
     const notif = [
       u.notify_email ? '✉️' : '<span style="color:var(--text-3)">✉</span>',
