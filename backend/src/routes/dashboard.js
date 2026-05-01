@@ -69,6 +69,7 @@ router.get('/resume', async (req, res) => {
         JOIN user_scores us ON us.assignment_id = a.id
         JOIN groups g ON g.id = a.group_id
         JOIN group_members gm ON gm.group_id = g.id AND gm.user_id = $1
+        JOIN group_members gm2 ON gm2.user_id = us.user_id AND gm2.group_id = g.id
         WHERE true ${yearClause}
         GROUP BY us.user_id
       ) t

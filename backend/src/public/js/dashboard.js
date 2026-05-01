@@ -5,6 +5,7 @@ let globalChart = null;
 let globalLineChart = null;
 let chartMode = 'moyenne'; // 'moyenne' | 'mediane'
 let currentChartData = null;
+let coursesCache = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   const user = await API.requireOnboarded();
@@ -226,6 +227,7 @@ async function loadCourses() {
 
   const url = currentYear ? `/dashboard/cours?annee=${encodeURIComponent(currentYear)}` : '/dashboard/cours';
   const courses = await API.get(url);
+  coursesCache = courses;
 
   document.getElementById('controls-row').style.display = courses?.length ? '' : 'none';
 
@@ -315,15 +317,9 @@ function renderDetailStats(travaux, graphique) {
       : sortedPct[Math.floor(sortedPct.length / 2)]
     : null;
 
-  const groupMedValues = travaux
-    .filter(t => t.group_median_pct !== null)
-    .map(t => parseFloat(t.group_median_pct))
-    .sort((a, b) => a - b);
-  const groupMed = groupMedValues.length > 0
-    ? groupMedValues.length % 2 === 0
-      ? (groupMedValues[groupMedValues.length / 2 - 1] + groupMedValues[groupMedValues.length / 2]) / 2
-      : groupMedValues[Math.floor(groupMedValues.length / 2)]
-    : null;
+  // Use the backend-computed group median (median of member weighted averages) from the courses list
+  const cachedCourse = coursesCache?.find(c => c.group_id === selectedGroupId);
+  const groupMed = cachedCourse?.group_median != null ? parseFloat(cachedCourse.group_median) : null;
 
   const gw = graphique?.graded_weight || 0;
   const tw = graphique?.total_weight || 0;
