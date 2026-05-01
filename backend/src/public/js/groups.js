@@ -96,7 +96,7 @@ async function loadGroupDetail(groupId, detailEl) {
   const memberRows = members.map(m => `
     <li class="member-row">
       <div>
-        <span class="member-email">${escapeHtml(m.email)}</span>
+        <span class="member-email">${escapeHtml(m.full_name || m.email)}</span>
         ${m.is_admin ? ' <span class="badge badge-primary">Admin</span>' : ''}
       </div>
       <div class="member-meta">

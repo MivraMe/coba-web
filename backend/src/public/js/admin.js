@@ -42,6 +42,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('edit-modal-save').addEventListener('click', handleEditSave);
     document.getElementById('edit-modal-close').addEventListener('click', closeEditModal);
     document.getElementById('edit-modal-cancel').addEventListener('click', closeEditModal);
+    initAdminCropListeners();
     document.getElementById('todo-add-btn').addEventListener('click', () => openTodoModal(null));
     document.getElementById('todo-modal-save').addEventListener('click', handleTodoSave);
     document.getElementById('todo-modal-close').addEventListener('click', closeTodoModal);
@@ -51,6 +52,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('notif-test-btn').addEventListener('click', handleNotifTest);
   document.getElementById('sync-test-btn').addEventListener('click', handleSyncTest);
   document.getElementById('portal-test-btn').addEventListener('click', handlePortalTest);
+  initPortalEndpointBtns();
 
   // TODO filter buttons (visible to all admins)
   document.querySelectorAll('[data-todo-filter]').forEach(btn => {
@@ -215,6 +217,143 @@ function escapeHtml(str) {
 
 // ── USERS ─────────────────────────────────────────────────────────────────────
 
+// ── Admin photo crop ─────────────────────────────────────────────────────────
+const admCrop = { img: null, zoom: 1, offsetX: 0, offsetY: 0, dragging: false, startX: 0, startY: 0, usePhoto: false, changed: false };
+
+function admInitCrop(base64) {
+  admCrop.usePhoto = true;
+  const src = base64.startsWith('data:') ? base64 : `data:image/jpeg;base64,${base64}`;
+  const img = new Image();
+  img.onload = () => {
+    admCrop.img = img;
+    const canvas = document.getElementById('admin-crop-canvas');
+    const size = canvas.width;
+    const scale = Math.max(size / img.width, size / img.height);
+    admCrop.zoom = scale;
+    admCrop.offsetX = (size - img.width * scale) / 2;
+    admCrop.offsetY = (size - img.height * scale) / 2;
+    const zsl = document.getElementById('admin-crop-zoom');
+    zsl.min = scale.toFixed(4); zsl.max = (scale * 3).toFixed(4); zsl.value = scale.toFixed(4);
+    admRenderCrop();
+    admSetupDrag();
+  };
+  img.src = src;
+}
+
+function admRenderCrop() {
+  const canvas = document.getElementById('admin-crop-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const size = canvas.width;
+  ctx.clearRect(0, 0, size, size);
+  if (!admCrop.usePhoto || !admCrop.img) {
+    ctx.fillStyle = '#e2e8f0';
+    ctx.beginPath(); ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = `bold ${Math.round(size / 2.8)}px sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('?', size / 2, size / 2 + 2);
+    return;
+  }
+  ctx.save();
+  ctx.beginPath(); ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2); ctx.clip();
+  ctx.drawImage(admCrop.img, admCrop.offsetX, admCrop.offsetY, admCrop.img.width * admCrop.zoom, admCrop.img.height * admCrop.zoom);
+  ctx.restore();
+  ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(size / 2, size / 2, size / 2 - 1, 0, Math.PI * 2); ctx.stroke();
+}
+
+function admClamp() {
+  const canvas = document.getElementById('admin-crop-canvas');
+  if (!canvas || !admCrop.img) return;
+  const size = canvas.width;
+  admCrop.offsetX = Math.min(0, Math.max(size - admCrop.img.width * admCrop.zoom, admCrop.offsetX));
+  admCrop.offsetY = Math.min(0, Math.max(size - admCrop.img.height * admCrop.zoom, admCrop.offsetY));
+}
+
+let _admDragSetup = false;
+function admSetupDrag() {
+  if (_admDragSetup) return;
+  _admDragSetup = true;
+  const canvas = document.getElementById('admin-crop-canvas');
+  canvas.addEventListener('mousedown', e => {
+    admCrop.dragging = true;
+    admCrop.startX = e.clientX - admCrop.offsetX; admCrop.startY = e.clientY - admCrop.offsetY;
+    canvas.style.cursor = 'grabbing';
+  });
+  window.addEventListener('mousemove', e => {
+    if (!admCrop.dragging) return;
+    admCrop.offsetX = e.clientX - admCrop.startX; admCrop.offsetY = e.clientY - admCrop.startY;
+    admClamp(); admRenderCrop();
+  });
+  window.addEventListener('mouseup', () => { admCrop.dragging = false; canvas.style.cursor = 'grab'; });
+  canvas.addEventListener('touchstart', e => {
+    const t = e.touches[0]; admCrop.dragging = true;
+    admCrop.startX = t.clientX - admCrop.offsetX; admCrop.startY = t.clientY - admCrop.offsetY;
+  }, { passive: true });
+  canvas.addEventListener('touchmove', e => {
+    e.preventDefault();
+    const t = e.touches[0];
+    admCrop.offsetX = t.clientX - admCrop.startX; admCrop.offsetY = t.clientY - admCrop.startY;
+    admClamp(); admRenderCrop();
+  }, { passive: false });
+  canvas.addEventListener('touchend', () => { admCrop.dragging = false; });
+}
+
+function admGetCropped(outputSize = 200) {
+  if (!admCrop.usePhoto || !admCrop.img) return null;
+  const src = document.getElementById('admin-crop-canvas');
+  const scale = outputSize / src.width;
+  const out = document.createElement('canvas');
+  out.width = outputSize; out.height = outputSize;
+  const ctx = out.getContext('2d');
+  ctx.save();
+  ctx.beginPath(); ctx.arc(outputSize / 2, outputSize / 2, outputSize / 2, 0, Math.PI * 2); ctx.clip();
+  ctx.drawImage(admCrop.img, admCrop.offsetX * scale, admCrop.offsetY * scale,
+    admCrop.img.width * admCrop.zoom * scale, admCrop.img.height * admCrop.zoom * scale);
+  ctx.restore();
+  return out.toDataURL('image/jpeg', 0.88);
+}
+
+function initAdminCropListeners() {
+  document.getElementById('admin-crop-zoom').addEventListener('input', e => {
+    const newZoom = parseFloat(e.target.value);
+    const canvas = document.getElementById('admin-crop-canvas');
+    const size = canvas.width;
+    const imgX = (size / 2 - admCrop.offsetX) / admCrop.zoom;
+    const imgY = (size / 2 - admCrop.offsetY) / admCrop.zoom;
+    admCrop.zoom = newZoom;
+    admCrop.offsetX = size / 2 - imgX * newZoom; admCrop.offsetY = size / 2 - imgY * newZoom;
+    admClamp(); admRenderCrop();
+    admCrop.changed = true;
+  });
+  document.getElementById('admin-photo-upload').addEventListener('change', e => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => { admInitCrop(ev.target.result); admCrop.changed = true; };
+    reader.readAsDataURL(file);
+  });
+  document.getElementById('admin-btn-remove-photo').addEventListener('click', () => {
+    admCrop.usePhoto = false; admCrop.img = null; admCrop.changed = true; admRenderCrop();
+  });
+}
+// ── End admin crop ────────────────────────────────────────────────────────────
+
+// Avatar initiales colorées
+const AVATAR_COLORS = ['#6366f1','#8b5cf6','#ec4899','#f43f5e','#f97316','#eab308','#22c55e','#14b8a6','#0ea5e9','#3b82f6'];
+function avatarColor(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) & 0xffffffff;
+  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
+}
+function avatarInitials(fullName, email) {
+  if (fullName) {
+    const parts = fullName.trim().split(/\s+/);
+    return parts.length >= 2 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : parts[0].slice(0, 2).toUpperCase();
+  }
+  return email.slice(0, 2).toUpperCase();
+}
+
 let _usersCache = [];
 
 async function loadUsers() {
@@ -239,10 +378,15 @@ function renderUsersTable(users) {
     const synced = u.last_synced
       ? `<span style="display:block;color:var(--text-3);font-size:.75rem">Dernière synchro</span>${new Date(u.last_synced).toLocaleString('fr-CA', { dateStyle: 'short', timeStyle: 'short' })}`
       : '—';
+    const MAX_VISIBLE = 9;
+    const allGroupTitles = u.groups.map(g => `${g.course_code} — ${g.course_name} (${g.school_year})`).join('\n');
+    const visible = u.groups.slice(0, MAX_VISIBLE);
+    const extra = u.groups.length - MAX_VISIBLE;
+    const badgeStyle = 'font-size:.7rem;padding:.15rem .4rem;white-space:nowrap;text-align:center';
     const groups = u.groups.length > 0
-      ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:.2rem">${
-          u.groups.map(g => `<span class="badge badge-neutral" title="${escapeHtml(g.course_name)}">${escapeHtml(g.course_code)}</span>`).join('')
-        }</div>`
+      ? `<div style="display:grid;grid-template-columns:repeat(3,auto);gap:.2rem;width:fit-content" title="${escapeHtml(allGroupTitles)}">${
+          visible.map(g => `<span class="badge badge-neutral" style="${badgeStyle}">${escapeHtml(g.course_code)}</span>`).join('')
+        }${extra > 0 ? `<span class="badge badge-neutral" style="${badgeStyle}">+${extra}</span>` : ''}</div>`
       : '<span style="color:var(--text-3)">—</span>';
     const notif = [
       u.notify_email ? '✉️' : '<span style="color:var(--text-3)">✉</span>',
@@ -279,10 +423,21 @@ function renderUsersTable(users) {
       `;
     }
 
+    const initials = avatarInitials(u.full_name, u.email);
+    const avatarBg = avatarColor(u.email);
+    const avatarHtml = u.photo_base64
+      ? `<img src="data:image/jpeg;base64,${u.photo_base64}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;flex-shrink:0;display:block" alt="">`
+      : `<div style="width:34px;height:34px;border-radius:50%;background:${avatarBg};color:#fff;font-size:.72rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;user-select:none">${escapeHtml(initials)}</div>`;
     return `<tr>
-      <td style="font-size:.85rem">
-        ${escapeHtml(u.email)}
-        ${u.invited_by_email ? `<span style="display:block;color:var(--text-3);font-size:.72rem;margin-top:.15rem">Invité par ${escapeHtml(u.invited_by_email)}</span>` : ''}
+      <td>
+        <div style="display:flex;align-items:center;gap:.6rem">
+          ${avatarHtml}
+          <div style="min-width:0">
+            ${u.full_name ? `<div style="font-weight:600;font-size:.85rem;line-height:1.2">${escapeHtml(u.full_name)}</div>` : ''}
+            <div style="font-size:.78rem;color:var(--text-3)">${escapeHtml(u.email)}</div>
+            ${u.invited_by_email ? `<div style="color:var(--text-3);font-size:.72rem;margin-top:.1rem">Invité par ${escapeHtml(u.invited_by_email)}</div>` : ''}
+          </div>
+        </div>
       </td>
       <td style="font-size:.8rem;white-space:nowrap">${created}</td>
       <td style="font-size:.8rem">${synced}</td>
@@ -425,15 +580,31 @@ async function handleSyncTest() {
   }
 }
 
+let _portalTestEndpoint = 'notes';
+
+function initPortalEndpointBtns() {
+  document.querySelectorAll('.portal-ep-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.portal-ep-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      _portalTestEndpoint = btn.dataset.ep;
+    });
+  });
+}
+
 async function handlePortalTest() {
   const alertEl = document.getElementById('portal-test-alert');
+  const resultEl = document.getElementById('portal-test-result');
   const output = document.getElementById('portal-test-output');
+  const profileCard = document.getElementById('portal-test-profile-card');
   hideAlert(alertEl);
-  output.classList.add('hidden');
+  resultEl.classList.add('hidden');
+  profileCard.classList.add('hidden');
 
   const username = document.getElementById('portal-test-user').value.trim();
   const password = document.getElementById('portal-test-pass').value;
   const btn = document.getElementById('portal-test-btn');
+  const ep = _portalTestEndpoint;
 
   if (!username || !password) {
     showAlert(alertEl, 'Identifiant et mot de passe requis.');
@@ -441,29 +612,59 @@ async function handlePortalTest() {
   }
 
   setLoading(btn, true, 'Test…');
-  const res = await API.request('POST', '/admin/test/portal', { portal_username: username, portal_password: password });
+  const res = await API.request('POST', '/admin/test/portal', { portal_username: username, portal_password: password, endpoint: ep });
   setLoading(btn, false);
   const data = res ? await res.json() : null;
 
-  if (data && data.ok) {
-    showAlert(alertEl, 'Connexion réussie.', 'success');
-    output.textContent = JSON.stringify(data.data, null, 2);
-    output.classList.remove('hidden');
-  } else {
+  if (!data || !data.ok) {
     const msg = data?.error || 'Erreur inconnue';
     const code = data?.code ? ` [${data.code}]` : '';
     showAlert(alertEl, msg + code);
-    output.classList.add('hidden');
+    return;
   }
+
+  showAlert(alertEl, `/${ep} — réponse reçue.`, 'success');
+  resultEl.classList.remove('hidden');
+
+  // For profile / onboarding: show profile card + sanitized JSON (hide raw photo)
+  const profile = ep === 'profile' ? data.data
+    : ep === 'onboarding' ? data.data?.profile
+    : null;
+
+  if (profile) {
+    const photoEl = document.getElementById('portal-test-photo');
+    const noPhotoEl = document.getElementById('portal-test-no-photo');
+    document.getElementById('portal-test-name').textContent = profile.full_name || '—';
+    document.getElementById('portal-test-code').textContent = profile.permanent_code || '';
+    if (profile.photo_base64) {
+      const src = profile.photo_base64.startsWith('data:') ? profile.photo_base64 : `data:image/jpeg;base64,${profile.photo_base64}`;
+      photoEl.src = src;
+      photoEl.style.display = 'block';
+      noPhotoEl.style.display = 'none';
+    } else {
+      photoEl.style.display = 'none';
+      noPhotoEl.style.display = 'flex';
+    }
+    profileCard.style.display = 'flex';
+    profileCard.classList.remove('hidden');
+  }
+
+  // Sanitize photo from JSON output (too large to display raw)
+  const sanitized = JSON.parse(JSON.stringify(data.data));
+  if (ep === 'profile' && sanitized.photo_base64) sanitized.photo_base64 = `[base64 ${Math.round(sanitized.photo_base64.length * 0.75 / 1024)} KB]`;
+  if (ep === 'onboarding' && sanitized.profile?.photo_base64) sanitized.profile.photo_base64 = `[base64 ${Math.round(sanitized.profile.photo_base64.length * 0.75 / 1024)} KB]`;
+
+  output.textContent = JSON.stringify(sanitized, null, 2);
 }
 
 // ── MODAL ÉDITION UTILISATEUR ─────────────────────────────────────────────────
 
-function openEditModal(userId) {
+async function openEditModal(userId) {
   const user = _usersCache.find(u => u.id === userId);
   if (!user) return;
 
   document.getElementById('edit-user-id').value = user.id;
+  document.getElementById('edit-full-name').value = user.full_name || '';
   document.getElementById('edit-email').value = user.email;
   document.getElementById('edit-password').value = '';
   document.getElementById('edit-phone').value = user.phone || '';
@@ -474,7 +675,20 @@ function openEditModal(userId) {
   document.getElementById('edit-notify-sms').checked = !!user.notify_sms;
   hideAlert(document.getElementById('edit-modal-alert'));
 
+  // Display name hint in photo section
+  document.getElementById('edit-user-name-display').textContent = user.full_name || user.email;
+
+  // Reset crop state
+  admCrop.img = null; admCrop.usePhoto = false; admCrop.changed = false;
+  admRenderCrop();
+
   document.getElementById('edit-user-modal').classList.remove('hidden');
+
+  // Load user photo asynchronously
+  const photoData = await API.get(`/admin/users/${userId}/photo`);
+  if (photoData?.photo_base64) {
+    admInitCrop(photoData.photo_base64);
+  }
 }
 
 function closeEditModal() {
@@ -489,6 +703,7 @@ async function handleEditSave() {
 
   const body = {
     email: document.getElementById('edit-email').value.trim(),
+    full_name: document.getElementById('edit-full-name').value.trim() || null,
     phone: document.getElementById('edit-phone').value.trim() || null,
     notify_email: document.getElementById('edit-notify-email').checked,
     notify_sms: document.getElementById('edit-notify-sms').checked,
@@ -499,6 +714,9 @@ async function handleEditSave() {
   if (pwd) body.password = pwd;
   const portalPwd = document.getElementById('edit-portal-pass').value;
   if (portalPwd) body.portal_password = portalPwd;
+  if (admCrop.changed) {
+    body.photo_base64 = admCrop.usePhoto && admCrop.img ? admGetCropped() : null;
+  }
 
   setLoading(btn, true, 'Sauvegarde…');
   const res = await API.request('PATCH', `/admin/users/${userId}`, body);

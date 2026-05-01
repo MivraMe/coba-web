@@ -52,7 +52,7 @@ router.get('/:id', async (req, res) => {
     if (groupRes.rows.length === 0) return res.status(404).json({ error: 'Groupe introuvable' });
 
     const membersRes = await pool.query(
-      `SELECT u.id, u.email, gm.joined_at, gm.refreshed_at,
+      `SELECT u.id, u.email, u.full_name, gm.joined_at, gm.refreshed_at,
          u.id = g.admin_user_id AS is_admin
        FROM group_members gm
        JOIN users u ON u.id = gm.user_id

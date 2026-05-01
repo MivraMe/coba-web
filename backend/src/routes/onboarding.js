@@ -2,7 +2,7 @@ const express = require('express');
 const { pool } = require('../db');
 const { requireAuth, requireRegularUser } = require('../middleware/auth');
 const { encrypt } = require('../services/crypto');
-const { fetchNotes, parseAssignment, getCanonicalSchoolYear } = require('../services/portalApi');
+const { fetchNotes, fetchProfile, parseAssignment, getCanonicalSchoolYear } = require('../services/portalApi');
 const { processAssignments } = require('../services/dataSync');
 
 const router = express.Router();
@@ -71,11 +71,24 @@ router.post('/portail', async (req, res) => {
       });
     }
 
-    // Save encrypted credentials
+    // Fetch profile data (non-blocking — ignore failures)
+    let profile = {};
+    try {
+      profile = await fetchProfile(portal_username, portal_password);
+    } catch { /* portail may not support /profile yet */ }
+
+    // Save encrypted credentials + profile data
     const encrypted = encrypt(portal_password);
     await pool.query(
-      'UPDATE users SET portal_username = $1, portal_password_encrypted = $2, onboarding_step = GREATEST(onboarding_step, 1) WHERE id = $3',
-      [portal_username, encrypted, req.user.id]
+      `UPDATE users SET
+         portal_username = $1,
+         portal_password_encrypted = $2,
+         full_name = COALESCE($3, full_name),
+         permanent_code = COALESCE($4, permanent_code),
+         photo_base64 = COALESCE($5, photo_base64),
+         onboarding_step = GREATEST(onboarding_step, 1)
+       WHERE id = $6`,
+      [portal_username, encrypted, profile.full_name || null, profile.permanent_code || null, profile.photo_base64 || null, req.user.id]
     );
 
     // Insert all assignments in DB
@@ -86,7 +99,7 @@ router.post('/portail', async (req, res) => {
       [req.user.id]
     );
 
-    res.json({ courses, total_assignments: rawAssignments.length });
+    res.json({ courses, total_assignments: rawAssignments.length, profile });
   } catch (err) {
     if (err.code === 'INVALID_CREDENTIALS') return res.status(401).json({ error: err.message, code: err.code });
     if (err.code === 'PORTAL_SLOW') return res.status(503).json({ error: err.message, code: err.code });

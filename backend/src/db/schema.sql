@@ -145,6 +145,11 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
 );
 CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user ON password_reset_tokens(user_id);
 
+-- Données de profil depuis le portail
+ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(255);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS permanent_code VARCHAR(50);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS photo_base64 TEXT;
+
 -- TODO items
 CREATE TABLE IF NOT EXISTS todo_items (
   id SERIAL PRIMARY KEY,

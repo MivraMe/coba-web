@@ -132,11 +132,12 @@ function setupNav(user) {
   const nav = document.getElementById('main-nav');
   if (!nav || !user) return;
 
+  const displayName = user.full_name || user.email;
   const emailEl = nav.querySelector('.nav-email');
-  if (emailEl) emailEl.textContent = user.email;
+  if (emailEl) emailEl.textContent = displayName;
 
   const emailMobileEl = document.querySelector('.nav-email-mobile');
-  if (emailMobileEl) emailMobileEl.textContent = user.email;
+  if (emailMobileEl) emailMobileEl.textContent = displayName;
 
   nav.querySelectorAll('.nav-logout').forEach(el => el.addEventListener('click', () => API.logout()));
 

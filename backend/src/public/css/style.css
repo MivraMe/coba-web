@@ -654,3 +654,62 @@ tr:hover td { background: var(--bg); }
   .year-filter { gap: .35rem; }
   .year-btn { font-size: .8rem; padding: .3rem .65rem; }
 }
+
+/* ── Photo crop tool ────────────────────────────────────────────────────── */
+.photo-crop-wrap {
+  display: flex;
+  gap: 1.25rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.photo-crop-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .75rem;
+  flex-shrink: 0;
+}
+.crop-canvas {
+  border-radius: 50%;
+  cursor: grab;
+  display: block;
+  box-shadow: 0 2px 12px rgba(0,0,0,.12);
+  touch-action: none;
+}
+.crop-canvas:active { cursor: grabbing; }
+.crop-zoom-slider {
+  width: 100%;
+  accent-color: var(--primary);
+  max-width: 240px;
+}
+/* Onboarding layout */
+.photo-crop-wrap:not(.photo-compte-wrap) {
+  flex-direction: column;
+  align-items: center;
+}
+.photo-crop-actions {
+  display: flex;
+  gap: .75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: .25rem;
+}
+/* Account page layout */
+.photo-compte-wrap {
+  flex-direction: row;
+  align-items: flex-start;
+}
+.photo-compte-side {
+  flex: 1;
+  min-width: 130px;
+}
+@media (max-width: 480px) {
+  .photo-compte-wrap { flex-direction: column; align-items: flex-start; }
+}
+
+/* ── Portal endpoint selector ───────────────────────────────────────────── */
+.portal-ep-btn.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
