@@ -166,6 +166,20 @@ router.put('/notifications', async (req, res) => {
   }
 });
 
+// PUT /api/compte/totp/settings — toggle totp_require_at_login
+router.put('/totp/settings', async (req, res) => {
+  const { require_at_login } = req.body;
+  try {
+    const { rows } = await pool.query('SELECT totp_enabled FROM users WHERE id = $1', [req.user.id]);
+    if (!rows[0]?.totp_enabled) return res.status(400).json({ error: '2FA non activée' });
+    await pool.query('UPDATE users SET totp_require_at_login = $1 WHERE id = $2', [!!require_at_login, req.user.id]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // GET /api/compte/totp/status
 router.get('/totp/status', async (req, res) => {
   try {

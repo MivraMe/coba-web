@@ -188,7 +188,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('form-delete').addEventListener('submit', handleDelete);
 
   // ── TOTP ──────────────────────────────────────────────────────────────────
-  await initTotpSection(user.totp_enabled);
+  await initTotpSection(user.totp_enabled, user.totp_require_at_login);
 
   document.getElementById('btn-totp-start-setup').addEventListener('click', startTotpSetup);
   document.getElementById('btn-totp-cancel-setup').addEventListener('click', () => showTotpView('disabled'));
@@ -368,8 +368,23 @@ function showTotpView(view) {
   }
 }
 
-async function initTotpSection(enabled) {
+async function initTotpSection(enabled, requireAtLogin) {
   showTotpView(enabled ? 'enabled' : 'disabled');
+  if (enabled) {
+    const checkbox = document.getElementById('totp-require-login');
+    checkbox.checked = !!requireAtLogin;
+    checkbox.addEventListener('change', async () => {
+      const alertEl = document.getElementById('alert-totp');
+      hideAlert(alertEl);
+      const res = await API.request('PUT', '/compte/totp/settings', { require_at_login: checkbox.checked });
+      if (!res) return;
+      const data = await res.json();
+      if (!res.ok) {
+        showAlert(alertEl, data.error || 'Erreur lors de la mise à jour');
+        checkbox.checked = !checkbox.checked; // revert
+      }
+    });
+  }
 }
 
 async function startTotpSetup() {
@@ -408,6 +423,7 @@ async function handleTotpEnable() {
   const data = await res.json();
   if (res.ok) {
     showTotpView('enabled');
+    await initTotpSection(true, false);
     showAlert(document.getElementById('alert-totp'), 'Double authentification activée avec succès.', 'success');
   } else {
     showAlert(alertEl, data.error || 'Erreur lors de l\'activation');

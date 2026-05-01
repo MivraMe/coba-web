@@ -153,6 +153,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS photo_base64 TEXT;
 -- TOTP 2FA (idempotent migration)
 ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_enabled BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS admin_totp_verified_at TIMESTAMPTZ;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_require_at_login BOOLEAN NOT NULL DEFAULT false;
 
 -- TODO items
 CREATE TABLE IF NOT EXISTS todo_items (

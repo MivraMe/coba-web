@@ -1,66 +1,11 @@
 const ALL_TABS = ['monitoring', 'users', 'tests', 'config', 'deploy', 'todo'];
 
 // ── Gate TOTP admin ──────────────────────────────────────────────────────────
-async function checkTotpElevation() {
-  const data = await API.get('/admin/totp-elevation');
-  if (!data) return false;
 
-  if (!data.requires_totp) {
-    // TOTP non activé — montrer le bandeau de recommandation et laisser passer
-    document.getElementById('totp-gate-no-totp').classList.remove('hidden');
-    document.getElementById('totp-gate-code').closest('.form-group').style.display = 'none';
-    document.getElementById('totp-gate-btn').style.display = 'none';
-    document.querySelector('#totp-gate-overlay p.text-sm').style.display = 'none';
-    showTotpGate();
-
-    return new Promise(resolve => {
-      document.getElementById('totp-gate-proceed-anyway').addEventListener('click', () => {
-        hideTotpGate();
-        resolve(true);
-      });
-    });
-  }
-
-  if (data.elevated) return true; // Déjà élevé et non expiré
-
-  // Afficher le gate TOTP
-  showTotpGate();
-  return new Promise(resolve => {
-    const btn = document.getElementById('totp-gate-btn');
-    const input = document.getElementById('totp-gate-code');
-    const alertEl = document.getElementById('totp-gate-alert');
-
-    async function tryElevate() {
-      const code = input.value.trim();
-      hideAlert(alertEl);
-      if (!code) { showAlert(alertEl, 'Entrez le code TOTP.'); return; }
-
-      setLoading(btn, true, 'Vérification…');
-      const res = await API.request('POST', '/admin/totp-elevation', { code });
-      setLoading(btn, false, 'Vérifier');
-      if (!res) return;
-
-      const result = await res.json();
-      if (res.ok) {
-        hideTotpGate();
-        // Afficher l'heure d'expiration dans la nav
-        if (result.expires_at) scheduleElevationExpiry(result.expires_at);
-        resolve(true);
-      } else {
-        showAlert(alertEl, result.error || 'Code invalide');
-        input.value = '';
-        input.focus();
-      }
-    }
-
-    btn.addEventListener('click', tryElevate);
-    input.addEventListener('keydown', e => { if (e.key === 'Enter') tryElevate(); });
-    input.focus();
-  });
-}
-
-function showTotpGate() {
+function showTotpGate(panel) {
   const overlay = document.getElementById('totp-gate-overlay');
+  document.getElementById('totp-gate-verify').classList.toggle('hidden', panel !== 'verify');
+  document.getElementById('totp-gate-setup').classList.toggle('hidden', panel !== 'setup');
   overlay.classList.remove('hidden');
   overlay.style.display = 'flex';
 }
@@ -71,42 +16,133 @@ function hideTotpGate() {
   overlay.style.display = '';
 }
 
+// Élève la session avec un code TOTP. Mauvais code → 401 → API auto-logout → retour login.
+function promiseElevate(alertEl, onSuccess) {
+  const btn = document.getElementById('totp-gate-btn');
+  const input = document.getElementById('totp-gate-code');
+
+  // Clone le bouton pour repartir d'un état propre (pas de listeners dupliqués)
+  const freshBtn = btn.cloneNode(true);
+  btn.parentNode.replaceChild(freshBtn, btn);
+
+  async function tryElevate() {
+    const code = input.value.trim();
+    hideAlert(alertEl);
+    if (!code) { showAlert(alertEl, 'Entrez le code TOTP.'); return; }
+
+    setLoading(freshBtn, true, 'Vérification…');
+    const res = await API.request('POST', '/admin/totp-elevation', { code });
+    // res === null → API a auto-logouté sur 401 (mauvais code) → redirect vers '/'
+    setLoading(freshBtn, false, 'Vérifier');
+    if (!res) return;
+
+    const result = await res.json();
+    if (res.ok) {
+      hideTotpGate();
+      if (result.expires_at) scheduleElevationExpiry(result.expires_at);
+      onSuccess();
+    }
+    // Pas d'affichage d'erreur ici : un 401 déclenche déjà l'auto-logout
+  }
+
+  freshBtn.addEventListener('click', tryElevate);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') tryElevate(); });
+  input.value = '';
+  input.focus();
+}
+
 function scheduleElevationExpiry(expiresAt) {
   const ms = new Date(expiresAt).getTime() - Date.now();
   if (ms <= 0) return;
   setTimeout(() => {
-    showTotpGate();
-    document.getElementById('totp-gate-alert').textContent = 'Votre session admin a expiré. Veuillez vous ré-authentifier.';
-    document.getElementById('totp-gate-alert').className = 'alert alert-error';
-    document.getElementById('totp-gate-code').value = '';
-    document.getElementById('totp-gate-code').focus();
-    // Réinitialiser les handlers
-    const btn = document.getElementById('totp-gate-btn');
-    const newBtn = btn.cloneNode(true);
-    btn.parentNode.replaceChild(newBtn, btn);
-    const input = document.getElementById('totp-gate-code');
-    async function tryElevate() {
-      const code = input.value.trim();
-      const alertEl = document.getElementById('totp-gate-alert');
-      hideAlert(alertEl);
-      if (!code) { showAlert(alertEl, 'Entrez le code TOTP.'); return; }
-      setLoading(newBtn, true, 'Vérification…');
-      const res = await API.request('POST', '/admin/totp-elevation', { code });
-      setLoading(newBtn, false, 'Vérifier');
-      if (!res) return;
-      const result = await res.json();
-      if (res.ok) {
-        hideTotpGate();
-        if (result.expires_at) scheduleElevationExpiry(result.expires_at);
-      } else {
-        showAlert(alertEl, result.error || 'Code invalide');
-        input.value = '';
-        input.focus();
-      }
-    }
-    newBtn.addEventListener('click', tryElevate);
-    input.addEventListener('keydown', e => { if (e.key === 'Enter') tryElevate(); });
+    showTotpGate('verify');
+    const alertEl = document.getElementById('totp-gate-alert');
+    showAlert(alertEl, 'Session admin expirée. Entrez votre code TOTP pour continuer.', 'error');
+    promiseElevate(alertEl, () => { /* page continue normalement */ });
   }, ms);
+}
+
+async function checkTotpElevation() {
+  const data = await API.get('/admin/totp-elevation');
+  if (!data) return false; // erreur réseau ou auto-logout
+
+  // Cas 1 : TOTP déjà validé et non expiré
+  if (data.totp_configured && data.elevated) {
+    if (data.expires_at) scheduleElevationExpiry(data.expires_at);
+    return true;
+  }
+
+  // Cas 2 : TOTP configuré mais session non élevée → panneau de vérification
+  if (data.totp_configured && !data.elevated) {
+    showTotpGate('verify');
+    return new Promise(resolve => {
+      const alertEl = document.getElementById('totp-gate-alert');
+      promiseElevate(alertEl, () => resolve(true));
+    });
+  }
+
+  // Cas 3 : TOTP non configuré → wizard de setup obligatoire
+  showTotpGate('setup');
+  return new Promise(resolve => {
+    const setupAlert = document.getElementById('totp-gate-setup-alert');
+    const setupAlert2 = document.getElementById('totp-gate-setup-alert2');
+    const startBtn = document.getElementById('totp-gate-start-setup-btn');
+
+    // Étape 1 : clic sur "Configurer maintenant"
+    startBtn.addEventListener('click', async () => {
+      hideAlert(setupAlert);
+      setLoading(startBtn, true, 'Génération…');
+      const setupData = await API.get('/compte/totp/setup');
+      setLoading(startBtn, false, 'Configurer maintenant');
+
+      if (!setupData || setupData.error) {
+        showAlert(setupAlert, setupData?.error || 'Erreur de génération');
+        return;
+      }
+
+      document.getElementById('totp-gate-qr').src = setupData.qr_data_url;
+      document.getElementById('totp-gate-secret').textContent =
+        setupData.secret.match(/.{1,4}/g).join(' ');
+      document.getElementById('totp-gate-setup-step1').classList.add('hidden');
+      document.getElementById('totp-gate-setup-step2').classList.remove('hidden');
+      document.getElementById('totp-gate-setup-code').value = '';
+      document.getElementById('totp-gate-setup-code').focus();
+    });
+
+    // Étape 2 : activer et élever en une seule action
+    const enableBtn = document.getElementById('totp-gate-setup-enable-btn');
+    enableBtn.addEventListener('click', async () => {
+      const code = document.getElementById('totp-gate-setup-code').value.trim();
+      hideAlert(setupAlert2);
+      if (!code) { showAlert(setupAlert2, 'Entrez le code de votre application.'); return; }
+
+      setLoading(enableBtn, true, 'Activation…');
+      const enableRes = await API.request('POST', '/compte/totp/enable', { code });
+      if (!enableRes) { setLoading(enableBtn, false, 'Activer et accéder au panel'); return; }
+      const enableData = await enableRes.json();
+
+      if (!enableRes.ok) {
+        setLoading(enableBtn, false, 'Activer et accéder au panel');
+        showAlert(setupAlert2, enableData.error || 'Code invalide');
+        return;
+      }
+
+      // TOTP activé → élever immédiatement avec le même code
+      const elevRes = await API.request('POST', '/admin/totp-elevation', { code });
+      setLoading(enableBtn, false, 'Activer et accéder au panel');
+      if (!elevRes) return; // 401 → auto-logout
+
+      const elevData = await elevRes.json();
+      if (elevRes.ok) {
+        hideTotpGate();
+        if (elevData.expires_at) scheduleElevationExpiry(elevData.expires_at);
+        resolve(true);
+      } else {
+        // Le code TOTP vient d'être validé lors de l'enable, un échec ici est improbable
+        showAlert(setupAlert2, elevData.error || 'Erreur d\'élévation');
+      }
+    });
+  });
 }
 // ── Fin gate TOTP ────────────────────────────────────────────────────────────
 

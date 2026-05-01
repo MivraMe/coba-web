@@ -27,12 +27,13 @@ router.get('/totp-elevation', async (req, res) => {
       [req.user.id]
     );
     const user = rows[0];
-    if (!user.totp_enabled) return res.json({ requires_totp: false });
+    // totp_configured: false → must set up TOTP first
+    if (!user.totp_enabled) return res.json({ totp_configured: false });
 
     const verifiedAt = user.admin_totp_verified_at;
     const elevated = verifiedAt && (Date.now() - new Date(verifiedAt).getTime()) < ELEVATION_TTL_MS;
     const expiresAt = elevated ? new Date(new Date(verifiedAt).getTime() + ELEVATION_TTL_MS) : null;
-    res.json({ requires_totp: true, elevated: !!elevated, expires_at: expiresAt });
+    res.json({ totp_configured: true, elevated: !!elevated, expires_at: expiresAt });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -40,6 +41,7 @@ router.get('/totp-elevation', async (req, res) => {
 });
 
 // POST /api/admin/totp-elevation — vérifier le code et élever la session
+// Wrong code → 401 so API.request auto-logouts the user (redirect to login)
 router.post('/totp-elevation', async (req, res) => {
   const { code } = req.body;
   if (!code) return res.status(400).json({ error: 'Code requis' });
@@ -60,6 +62,7 @@ router.post('/totp-elevation', async (req, res) => {
       token: String(code).replace(/\s/g, ''),
       window: 1,
     });
+    // 401 → API.request triggers auto-logout → user redirected to login page
     if (!valid) return res.status(401).json({ error: 'Code invalide' });
 
     await pool.query('UPDATE users SET admin_totp_verified_at = NOW() WHERE id = $1', [req.user.id]);
@@ -72,6 +75,8 @@ router.post('/totp-elevation', async (req, res) => {
 });
 
 // Middleware d'élévation TOTP pour toutes les routes suivantes
+// TOTP est obligatoire pour les admins — sans 2FA configurée : totp_setup_required
+// Avec 2FA mais session expirée : totp_elevation_required
 router.use(async (req, res, next) => {
   try {
     const { rows } = await pool.query(
@@ -79,8 +84,9 @@ router.use(async (req, res, next) => {
       [req.user.id]
     );
     const user = rows[0];
-    if (!user.totp_enabled) return next();
-
+    if (!user.totp_enabled) {
+      return res.status(403).json({ totp_setup_required: true });
+    }
     const verifiedAt = user.admin_totp_verified_at;
     if (!verifiedAt || (Date.now() - new Date(verifiedAt).getTime()) >= ELEVATION_TTL_MS) {
       return res.status(403).json({ totp_elevation_required: true });

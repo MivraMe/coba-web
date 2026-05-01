@@ -77,7 +77,7 @@ router.post('/login', async (req, res) => {
 
   try {
     const { rows } = await pool.query(
-      'SELECT id, email, password_hash, onboarding_step, onboarding_completed, is_admin, role, totp_enabled, totp_secret FROM users WHERE email = $1',
+      'SELECT id, email, password_hash, onboarding_step, onboarding_completed, is_admin, role, totp_enabled, totp_secret, totp_require_at_login FROM users WHERE email = $1',
       [email.toLowerCase().trim()]
     );
     const user = rows[0];
@@ -87,8 +87,9 @@ router.post('/login', async (req, res) => {
     if (!match) return res.status(401).json({ error: 'Identifiants incorrects' });
 
     const isAdmin = user.role === 'superadmin' || user.is_admin;
-    if (user.totp_enabled && !isAdmin) {
-      // Admins bypass TOTP at login — they must elevate at the admin panel instead
+    // Admins bypass login TOTP by default; the panel gate handles it.
+    // If totp_require_at_login is set, admins are also challenged at login.
+    if (user.totp_enabled && (!isAdmin || user.totp_require_at_login)) {
       if (!totp_code) {
         return res.json({ totp_required: true });
       }
@@ -113,7 +114,7 @@ router.post('/login', async (req, res) => {
 router.get('/me', requireAuth, async (req, res) => {
   try {
     const { rows } = await pool.query(
-      'SELECT id, email, recovery_email, phone, notify_email, notify_sms, onboarding_step, onboarding_completed, is_admin, role, created_at, full_name, permanent_code, totp_enabled FROM users WHERE id = $1',
+      'SELECT id, email, recovery_email, phone, notify_email, notify_sms, onboarding_step, onboarding_completed, is_admin, role, created_at, full_name, permanent_code, totp_enabled, totp_require_at_login FROM users WHERE id = $1',
       [req.user.id]
     );
     if (!rows[0]) return res.status(404).json({ error: 'Utilisateur introuvable' });
