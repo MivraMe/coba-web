@@ -290,6 +290,29 @@
     </a>
   </nav>
 
+  <!-- ── GATE TOTP ADMIN ── -->
+  <div id="totp-gate-overlay" class="modal-overlay hidden" style="z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem">
+    <div style="max-width:380px;width:100%;text-align:center">
+      <div style="margin-bottom:1.25rem">
+        <svg width="40" height="40" fill="none" stroke="var(--primary,#6366f1)" stroke-width="1.5" viewBox="0 0 24 24" style="margin-bottom:.75rem"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg>
+        <h2 style="font-size:1.15rem;font-weight:700;margin-bottom:.4rem">Vérification requise</h2>
+        <p class="text-sm" style="color:var(--text-2)">L'accès au panel d'administration nécessite une confirmation TOTP. Cette session sera valide <strong>1 heure</strong>.</p>
+      </div>
+      <div id="totp-gate-alert" class="alert alert-hidden" style="margin-bottom:.75rem"></div>
+      <div class="form-group" style="margin-bottom:1rem">
+        <label class="form-label" for="totp-gate-code">Code d'authentification (6 chiffres)</label>
+        <input type="text" id="totp-gate-code" class="form-control" placeholder="123456" maxlength="6" inputmode="numeric" autocomplete="one-time-code" style="letter-spacing:.25em;font-size:1.2rem;text-align:center">
+      </div>
+      <button type="button" class="btn btn-primary btn-block" id="totp-gate-btn">Vérifier</button>
+      <p class="text-sm" style="margin-top:1rem;color:var(--text-3)">Ouvrez votre application d'authentification (Google Authenticator, Authy…)</p>
+      <div id="totp-gate-no-totp" class="hidden" style="margin-top:1.5rem;padding:1rem;background:var(--warning-bg,#fef9c3);border:1px solid var(--warning-border,#fde047);border-radius:.5rem;text-align:left">
+        <p class="text-sm" style="font-weight:600;margin-bottom:.3rem">⚠ Double authentification non configurée</p>
+        <p class="text-sm" style="color:var(--text-2)">Pour sécuriser l'accès administrateur, activez le TOTP dans <a href="/compte" style="font-weight:600">Mon compte → Double authentification</a>.</p>
+        <button type="button" class="btn btn-primary btn-sm" id="totp-gate-proceed-anyway" style="margin-top:.75rem">Continuer quand même</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ── MODAL ÉDITION UTILISATEUR ── -->
   <div id="edit-user-modal" class="modal-overlay hidden">
     <div class="modal-card">

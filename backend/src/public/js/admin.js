@@ -1,5 +1,115 @@
 const ALL_TABS = ['monitoring', 'users', 'tests', 'config', 'deploy', 'todo'];
 
+// ── Gate TOTP admin ──────────────────────────────────────────────────────────
+async function checkTotpElevation() {
+  const data = await API.get('/admin/totp-elevation');
+  if (!data) return false;
+
+  if (!data.requires_totp) {
+    // TOTP non activé — montrer le bandeau de recommandation et laisser passer
+    document.getElementById('totp-gate-no-totp').classList.remove('hidden');
+    document.getElementById('totp-gate-code').closest('.form-group').style.display = 'none';
+    document.getElementById('totp-gate-btn').style.display = 'none';
+    document.querySelector('#totp-gate-overlay p.text-sm').style.display = 'none';
+    showTotpGate();
+
+    return new Promise(resolve => {
+      document.getElementById('totp-gate-proceed-anyway').addEventListener('click', () => {
+        hideTotpGate();
+        resolve(true);
+      });
+    });
+  }
+
+  if (data.elevated) return true; // Déjà élevé et non expiré
+
+  // Afficher le gate TOTP
+  showTotpGate();
+  return new Promise(resolve => {
+    const btn = document.getElementById('totp-gate-btn');
+    const input = document.getElementById('totp-gate-code');
+    const alertEl = document.getElementById('totp-gate-alert');
+
+    async function tryElevate() {
+      const code = input.value.trim();
+      hideAlert(alertEl);
+      if (!code) { showAlert(alertEl, 'Entrez le code TOTP.'); return; }
+
+      setLoading(btn, true, 'Vérification…');
+      const res = await API.request('POST', '/admin/totp-elevation', { code });
+      setLoading(btn, false, 'Vérifier');
+      if (!res) return;
+
+      const result = await res.json();
+      if (res.ok) {
+        hideTotpGate();
+        // Afficher l'heure d'expiration dans la nav
+        if (result.expires_at) scheduleElevationExpiry(result.expires_at);
+        resolve(true);
+      } else {
+        showAlert(alertEl, result.error || 'Code invalide');
+        input.value = '';
+        input.focus();
+      }
+    }
+
+    btn.addEventListener('click', tryElevate);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') tryElevate(); });
+    input.focus();
+  });
+}
+
+function showTotpGate() {
+  const overlay = document.getElementById('totp-gate-overlay');
+  overlay.classList.remove('hidden');
+  overlay.style.display = 'flex';
+}
+
+function hideTotpGate() {
+  const overlay = document.getElementById('totp-gate-overlay');
+  overlay.classList.add('hidden');
+  overlay.style.display = '';
+}
+
+function scheduleElevationExpiry(expiresAt) {
+  const ms = new Date(expiresAt).getTime() - Date.now();
+  if (ms <= 0) return;
+  setTimeout(() => {
+    showTotpGate();
+    document.getElementById('totp-gate-alert').textContent = 'Votre session admin a expiré. Veuillez vous ré-authentifier.';
+    document.getElementById('totp-gate-alert').className = 'alert alert-error';
+    document.getElementById('totp-gate-code').value = '';
+    document.getElementById('totp-gate-code').focus();
+    // Réinitialiser les handlers
+    const btn = document.getElementById('totp-gate-btn');
+    const newBtn = btn.cloneNode(true);
+    btn.parentNode.replaceChild(newBtn, btn);
+    const input = document.getElementById('totp-gate-code');
+    async function tryElevate() {
+      const code = input.value.trim();
+      const alertEl = document.getElementById('totp-gate-alert');
+      hideAlert(alertEl);
+      if (!code) { showAlert(alertEl, 'Entrez le code TOTP.'); return; }
+      setLoading(newBtn, true, 'Vérification…');
+      const res = await API.request('POST', '/admin/totp-elevation', { code });
+      setLoading(newBtn, false, 'Vérifier');
+      if (!res) return;
+      const result = await res.json();
+      if (res.ok) {
+        hideTotpGate();
+        if (result.expires_at) scheduleElevationExpiry(result.expires_at);
+      } else {
+        showAlert(alertEl, result.error || 'Code invalide');
+        input.value = '';
+        input.focus();
+      }
+    }
+    newBtn.addEventListener('click', tryElevate);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') tryElevate(); });
+  }, ms);
+}
+// ── Fin gate TOTP ────────────────────────────────────────────────────────────
+
 document.addEventListener('DOMContentLoaded', async () => {
   const user = await API.requireAuth();
   if (!user) return;
@@ -8,6 +118,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
   setupNav(user);
+
+  const elevated = await checkTotpElevation();
+  if (!elevated) return;
 
   const isSuperAdmin = user.role === 'superadmin';
   _isSuperAdminView = isSuperAdmin;

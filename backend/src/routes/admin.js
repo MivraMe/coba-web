@@ -3,6 +3,7 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
+const speakeasy = require('speakeasy');
 const { pool } = require('../db');
 const { requireAuth, requireAdmin, requireSuperAdmin } = require('../middleware/auth');
 const { getSchedulerStatus, restartScheduler } = require('../services/scheduler');
@@ -15,6 +16,81 @@ const { encrypt } = require('../services/crypto');
 const router = express.Router();
 router.use(requireAuth);
 router.use(requireAdmin);
+
+const ELEVATION_TTL_MS = 60 * 60 * 1000; // 1 heure
+
+// GET /api/admin/totp-elevation — statut d'élévation TOTP
+router.get('/totp-elevation', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      'SELECT totp_enabled, admin_totp_verified_at FROM users WHERE id = $1',
+      [req.user.id]
+    );
+    const user = rows[0];
+    if (!user.totp_enabled) return res.json({ requires_totp: false });
+
+    const verifiedAt = user.admin_totp_verified_at;
+    const elevated = verifiedAt && (Date.now() - new Date(verifiedAt).getTime()) < ELEVATION_TTL_MS;
+    const expiresAt = elevated ? new Date(new Date(verifiedAt).getTime() + ELEVATION_TTL_MS) : null;
+    res.json({ requires_totp: true, elevated: !!elevated, expires_at: expiresAt });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST /api/admin/totp-elevation — vérifier le code et élever la session
+router.post('/totp-elevation', async (req, res) => {
+  const { code } = req.body;
+  if (!code) return res.status(400).json({ error: 'Code requis' });
+
+  try {
+    const { rows } = await pool.query(
+      'SELECT totp_enabled, totp_secret FROM users WHERE id = $1',
+      [req.user.id]
+    );
+    const user = rows[0];
+    if (!user.totp_enabled || !user.totp_secret) {
+      return res.status(400).json({ error: 'TOTP non configuré' });
+    }
+
+    const valid = speakeasy.totp.verify({
+      secret: user.totp_secret,
+      encoding: 'base32',
+      token: String(code).replace(/\s/g, ''),
+      window: 1,
+    });
+    if (!valid) return res.status(401).json({ error: 'Code invalide' });
+
+    await pool.query('UPDATE users SET admin_totp_verified_at = NOW() WHERE id = $1', [req.user.id]);
+    const expiresAt = new Date(Date.now() + ELEVATION_TTL_MS);
+    res.json({ ok: true, expires_at: expiresAt });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Middleware d'élévation TOTP pour toutes les routes suivantes
+router.use(async (req, res, next) => {
+  try {
+    const { rows } = await pool.query(
+      'SELECT totp_enabled, admin_totp_verified_at FROM users WHERE id = $1',
+      [req.user.id]
+    );
+    const user = rows[0];
+    if (!user.totp_enabled) return next();
+
+    const verifiedAt = user.admin_totp_verified_at;
+    if (!verifiedAt || (Date.now() - new Date(verifiedAt).getTime()) >= ELEVATION_TTL_MS) {
+      return res.status(403).json({ totp_elevation_required: true });
+    }
+    next();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
 
 const ENV_KEYS = [
   'PORTAL_BASE_URL',

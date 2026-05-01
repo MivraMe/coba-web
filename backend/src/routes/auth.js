@@ -86,7 +86,9 @@ router.post('/login', async (req, res) => {
     const match = await bcrypt.compare(password, user.password_hash);
     if (!match) return res.status(401).json({ error: 'Identifiants incorrects' });
 
-    if (user.totp_enabled) {
+    const isAdmin = user.role === 'superadmin' || user.is_admin;
+    if (user.totp_enabled && !isAdmin) {
+      // Admins bypass TOTP at login — they must elevate at the admin panel instead
       if (!totp_code) {
         return res.json({ totp_required: true });
       }
