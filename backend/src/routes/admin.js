@@ -7,7 +7,7 @@ const speakeasy = require('speakeasy');
 const { pool } = require('../db');
 const { requireAuth, requireAdmin, requireSuperAdmin } = require('../middleware/auth');
 const { getSchedulerStatus, restartScheduler } = require('../services/scheduler');
-const { syncUserData, runScheduledRefresh } = require('../services/dataSync');
+const { syncUserData, syncUserDataWithNotifications, runScheduledRefresh } = require('../services/dataSync');
 const { sendNewGradeEmail, sendAdminMessage } = require('../services/notifications/email');
 const { sendSms } = require('../services/notifications/sms');
 const { fetchNotes, fetchProfile, fetchOnboarding, testHealth } = require('../services/portalApi');
@@ -340,7 +340,7 @@ router.post('/users/:id/sync', async (req, res) => {
   try {
     const { rows } = await pool.query('SELECT id FROM users WHERE id = $1', [req.params.id]);
     if (rows.length === 0) return res.status(404).json({ error: 'Utilisateur introuvable' });
-    const result = await syncUserData(parseInt(req.params.id));
+    const result = await syncUserDataWithNotifications(parseInt(req.params.id));
     res.json({ ok: true, new_grades: result.newGrades.length });
   } catch (err) {
     console.error(err);
