@@ -188,9 +188,17 @@
       <!-- ── CONFIG ── -->
       <div id="tab-config" class="hidden">
         <div class="admin-section">
-          <h3>Portail &amp; Scheduler</h3>
+          <h3>Application</h3>
           <div id="config-alert" class="alert alert-hidden mb-1"></div>
           <form id="config-form">
+            <div class="config-grid">
+              <div class="form-group">
+                <label class="form-label">APP_URL <span style="color:var(--text-3)">(URL publique de l'app)</span></label>
+                <input type="url" class="form-control" name="APP_URL" placeholder="https://notesqc.ca">
+              </div>
+            </div>
+
+            <h3 style="margin:1.25rem 0 .75rem">Portail &amp; Scheduler</h3>
             <div class="config-grid">
               <div class="form-group">
                 <label class="form-label">PORTAL_BASE_URL</label>
