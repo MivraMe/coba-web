@@ -337,7 +337,6 @@ async function handleStep4(e) {
   setLoading(btn, true, 'Enregistrement…');
 
   const res = await API.request('POST', '/onboarding/notifications', {
-    recovery_email: document.getElementById('recovery-email').value || null,
     phone: document.getElementById('phone').value || null,
     notify_email: document.getElementById('notify-email').checked,
     notify_sms: document.getElementById('notify-sms').checked,
