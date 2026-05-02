@@ -134,6 +134,35 @@ If `ADMIN_EMAIL` + `ADMIN_PASSWORD` env vars are set, `ensureSuperAdmin()` creat
 
 **Superadmin: disable user TOTP**: `DELETE /api/admin/users/:id/totp` resets all TOTP columns. Accessible via the edit modal in the user list.
 
+### Statistics & dashboard calculations
+
+All stat calculations live in `routes/dashboard.js`. Four endpoints:
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /api/dashboard/resume` | Global header stats for the selected year |
+| `GET /api/dashboard/cours` | Per-course card stats |
+| `GET /api/dashboard/cours/:id/travaux` | Per-assignment list with group avg/median |
+| `GET /api/dashboard/cours/:id/graphique` | Time-series data for the chart |
+
+**Formulas:**
+
+- **Personal weighted average** — `Σ(weight × percentage) / Σ(weight)` where percentage IS NOT NULL
+- **Personal median** — `PERCENTILE_CONT(0.5)` over raw assignment percentages (unweighted)
+- **Group average** — `AVG(member_avg)` where `member_avg` is each member's personal weighted average
+- **Group median** — `PERCENTILE_CONT(0.5)` over `member_avg` values
+- **Per-assignment group avg/median** — simple `AVG`/`PERCENTILE_CONT` over raw percentages for that assignment, restricted to group members with a score
+
+The group stats inner subquery joins `group_members` twice: once to find assignments in groups where the current user is a member (`gm.user_id = $1`), and once to restrict scores to current members of each group (`gm2.user_id = us.user_id`). This prevents former members' scores from being included.
+
+**Group median visibility rule:** The group median is only shown when `member_count >= 3`. With 2 members, `PERCENTILE_CONT(0.5) = AVG` mathematically, making the median redundant. This is enforced in three places in `dashboard.js` (frontend): global header, course cards, and the detail panel. The `/resume` endpoint exposes `group_member_count` to support the header check.
+
+**Chart modes (frontend `dashboard.js`):**
+- *Moyenne* mode — plots cumulative weighted running average per student/group over time (x-axis = % of total grade weight evaluated)
+- *Médiane* mode — plots raw per-assignment percentages
+
+The detail panel's "Moy. groupe pondérée" and "Méd. groupe" come from `coursesCache` (the already-loaded `/cours` data), not recomputed from the assignment list.
+
 ### Frontend
 Plain HTML pages + vanilla JS in `public/`. `public/js/api.js` is a shared fetch wrapper that attaches the JWT from `localStorage`. No bundler — all scripts are loaded with `<script>` tags. Pages map 1:1 to routes in `index.js`.
 
