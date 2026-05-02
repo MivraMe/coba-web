@@ -245,4 +245,45 @@ async function sendNotifications(user, { assignment, group, score }) {
   }
 }
 
-module.exports = { syncUserData, processAssignments, syncGroupAllMembers, runScheduledRefresh };
+async function syncUserDataWithNotifications(userId) {
+  const { groupResults, newGrades } = await syncUserData(userId);
+
+  if (newGrades.length > 0) {
+    const groupIds = [...new Set(newGrades.map(({ group }) => group.id))];
+
+    for (const groupId of groupIds) {
+      await syncGroupAllMembers(groupId);
+
+      const { rows: members } = await pool.query(
+        'SELECT u.* FROM users u JOIN group_members gm ON u.id = gm.user_id WHERE gm.group_id = $1',
+        [groupId]
+      );
+
+      const gradesForGroup = newGrades.filter(({ group }) => group.id === groupId);
+
+      for (const member of members) {
+        for (const { assignment, group: gradeGroup, score: detectedScore } of gradesForGroup) {
+          const { rows: scoreRows } = await pool.query(
+            'SELECT score_obtained, score_max, percentage FROM user_scores WHERE assignment_id = $1 AND user_id = $2',
+            [assignment.id, member.id]
+          );
+          const memberScore =
+            scoreRows.length > 0 && scoreRows[0].percentage !== null
+              ? {
+                  score_obtained: parseFloat(scoreRows[0].score_obtained),
+                  score_max: parseFloat(scoreRows[0].score_max),
+                  percentage: parseFloat(scoreRows[0].percentage),
+                }
+              : detectedScore;
+          await sendNotifications(member, { assignment, group: gradeGroup, score: memberScore }).catch(err =>
+            console.error('Erreur notification:', err.message)
+          );
+        }
+      }
+    }
+  }
+
+  return { groupResults, newGrades };
+}
+
+module.exports = { syncUserData, syncUserDataWithNotifications, processAssignments, syncGroupAllMembers, runScheduledRefresh };
