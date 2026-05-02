@@ -525,6 +525,7 @@ router.post('/test/notification', async (req, res) => {
     const results = {};
 
     if (type === 'email' || type === 'both') {
+      let success = true;
       try {
         await sendNewGradeEmail(user.email, 'Test de notification — NotesQC', {
           courseCode: 'TEST',
@@ -534,20 +535,31 @@ router.post('/test/notification', async (req, res) => {
         });
         results.email = 'ok';
       } catch (err) {
+        success = false;
         results.email = err.message;
       }
+      await pool.query(
+        'INSERT INTO notification_log (user_id, type, success) VALUES ($1, $2, $3)',
+        [user.id, 'email', success]
+      ).catch(() => {});
     }
 
     if (type === 'sms' || type === 'both') {
       if (!user.phone) {
         results.sms = 'Aucun numéro de téléphone configuré';
       } else {
+        let success = true;
         try {
           await sendSms(user.phone, `[NotesQC TEST] ${testMsg}`);
           results.sms = 'ok';
         } catch (err) {
+          success = false;
           results.sms = err.message;
         }
+        await pool.query(
+          'INSERT INTO notification_log (user_id, type, success) VALUES ($1, $2, $3)',
+          [user.id, 'sms', success]
+        ).catch(() => {});
       }
     }
 
