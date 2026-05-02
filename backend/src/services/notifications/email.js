@@ -1,8 +1,4 @@
-const fs = require('fs');
-const path = require('path');
 const { Resend } = require('resend');
-
-const BANNER_PATH = path.join(__dirname, '../../public/logo/banner_whitetxt_blueback.png');
 
 function getClient() {
   const apiKey = process.env.RESEND_API_KEY;
@@ -14,43 +10,26 @@ function appUrl() {
   return (process.env.APP_URL || '').replace(/\/$/, '');
 }
 
-// Returns { bannerHtml, attachments } — banner embedded as CID when file exists,
-// falling back to a plain blue header.
-function bannerBlock(linkUrl) {
-  let bannerHtml;
-  let attachments = [];
-
-  if (fs.existsSync(BANNER_PATH)) {
-    const content = fs.readFileSync(BANNER_PATH).toString('base64');
-    attachments = [{
-      filename: 'banner.png',
-      content,
-      content_type: 'image/png',
-      content_id: 'notesqc-banner',
-      inline: true,
-    }];
-    const imgTag = `<img src="cid:notesqc-banner" alt="NotesQC" width="600"
-         style="width:100%;max-width:600px;height:auto;display:block" />`;
-    bannerHtml = linkUrl
-      ? `<a href="${linkUrl}" style="display:block;text-decoration:none">${imgTag}</a>`
-      : imgTag;
-  } else {
-    bannerHtml = `<table width="100%" cellpadding="0" cellspacing="0" role="presentation">
-      <tr><td bgcolor="#1e40af" style="padding:24px 32px">
-        <span style="color:#ffffff;font-size:1.5rem;font-weight:700;letter-spacing:.05em;
-                     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">NotesQC</span>
-      </td></tr>
-    </table>`;
-  }
-
-  return { bannerHtml, attachments };
-}
-
-function emailWrapper(bodyHtml, extraAttachments = []) {
+function emailWrapper(bodyHtml) {
   const base = appUrl();
-  const { bannerHtml, attachments } = bannerBlock(base || null);
 
-  const html = `<!DOCTYPE html>
+  // External URL is the only reliable approach across all email clients
+  // (Gmail strips CID inline images and data URIs).
+  // When APP_URL is not set, fall back to a table-based blue header
+  // (bgcolor works everywhere; CSS background on <div> is often stripped).
+  const bannerHtml = base
+    ? `<a href="${base}" style="display:block;text-decoration:none;line-height:0">
+        <img src="${base}/logo/banner_whitetxt_blueback.png" alt="NotesQC" width="600"
+             style="width:100%;max-width:600px;height:auto;display:block;border:0" />
+       </a>`
+    : `<table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+        <tr><td bgcolor="#1e40af" style="padding:24px 32px">
+          <span style="color:#ffffff;font-size:1.5rem;font-weight:700;letter-spacing:.05em;
+                       font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">NotesQC</span>
+        </td></tr>
+       </table>`;
+
+  return `<!DOCTYPE html>
 <html lang="fr">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#f1f5f9;
@@ -61,7 +40,7 @@ function emailWrapper(bodyHtml, extraAttachments = []) {
       <table width="600" cellpadding="0" cellspacing="0" role="presentation"
              style="max-width:600px;width:100%;background:#ffffff;
                     box-shadow:0 1px 3px rgba(0,0,0,.1)">
-        <tr><td style="padding:0">${bannerHtml}</td></tr>
+        <tr><td style="padding:0;line-height:0;font-size:0">${bannerHtml}</td></tr>
         <tr><td style="padding:32px 40px">${bodyHtml}</td></tr>
         <tr><td bgcolor="#f8fafc" style="padding:20px 40px;border-top:1px solid #e2e8f0">
           <p style="margin:0;color:#94a3b8;font-size:.8125rem;text-align:center">
@@ -76,8 +55,6 @@ function emailWrapper(bodyHtml, extraAttachments = []) {
   </table>
 </body>
 </html>`;
-
-  return { html, attachments: [...attachments, ...extraAttachments] };
 }
 
 function ctaButton(text, url) {
@@ -163,13 +140,11 @@ async function sendNewGradeEmail(to, subject, { courseCode, courseName, assignme
     ${dashboardUrl ? ctaButton('Voir mon tableau de bord', dashboardUrl) : ''}
   `;
 
-  const { html, attachments } = emailWrapper(body);
   const { error } = await client.emails.send({
     from: process.env.SMTP_FROM || 'NotesQC <noreply@notesqc.ca>',
     to,
     subject,
-    html,
-    attachments,
+    html: emailWrapper(body),
   });
 
   if (error) throw new Error(`Resend erreur: ${error.message}`);
@@ -200,13 +175,11 @@ async function sendInvitationEmail(to, { inviterEmail, inviteUrl, expiresAt }) {
     </p>
   `;
 
-  const { html, attachments } = emailWrapper(body);
   const { error } = await client.emails.send({
     from: process.env.SMTP_FROM || 'NotesQC <noreply@notesqc.ca>',
     to,
     subject: `${inviterEmail} t'invite à rejoindre NotesQC`,
-    html,
-    attachments,
+    html: emailWrapper(body),
   });
 
   if (error) throw new Error(`Resend erreur: ${error.message}`);
@@ -225,12 +198,10 @@ async function sendAdminMessage(to, subject, body) {
     </p>
   `;
 
-  const { html, attachments } = emailWrapper(bodyHtml);
   const { error } = await client.emails.send({
     from: process.env.SMTP_FROM || 'NotesQC <noreply@notesqc.ca>',
     to, subject,
-    html,
-    attachments,
+    html: emailWrapper(bodyHtml),
     text: body,
   });
   if (error) throw new Error(`Resend erreur: ${error.message}`);
@@ -264,13 +235,11 @@ async function sendPasswordResetEmail(to, code) {
     </p>
   `;
 
-  const { html, attachments } = emailWrapper(body);
   const { error } = await client.emails.send({
     from: process.env.SMTP_FROM || 'NotesQC <noreply@notesqc.ca>',
     to,
     subject: 'Code de réinitialisation — NotesQC',
-    html,
-    attachments,
+    html: emailWrapper(body),
   });
 
   if (error) throw new Error(`Resend erreur: ${error.message}`);
