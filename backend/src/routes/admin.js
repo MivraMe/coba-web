@@ -106,6 +106,7 @@ router.use(async (req, res, next) => {
 });
 
 const ENV_KEYS = [
+  'APP_URL',
   'PORTAL_BASE_URL',
   'REFRESH_INTERVAL_MINUTES',
   'RESEND_API_KEY', 'SMTP_FROM',

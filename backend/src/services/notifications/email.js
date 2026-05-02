@@ -73,7 +73,6 @@ async function sendNewGradeEmail(to, subject, { courseCode, courseName, assignme
 
   const base = appUrl();
   const dashboardUrl = base ? `${base}/dashboard.html` : null;
-  const portalUrl = process.env.PORTAL_BASE_URL || null;
   const pct = score.percentage != null ? parseFloat(score.percentage) : null;
 
   const body = `
@@ -117,11 +116,6 @@ async function sendNewGradeEmail(to, subject, { courseCode, courseName, assignme
     </table>
 
     ${dashboardUrl ? ctaButton('Voir mon tableau de bord', dashboardUrl) : ''}
-    ${portalUrl ? `<p style="margin:12px 0 0;font-size:.875rem">
-      <a href="${portalUrl}" style="color:#1e40af;text-decoration:underline">
-        Accéder au portail scolaire
-      </a>
-    </p>` : ''}
   `;
 
   const { error } = await client.emails.send({
