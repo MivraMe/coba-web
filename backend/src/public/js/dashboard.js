@@ -5,6 +5,7 @@ let globalChart = null;
 let globalLineChart = null;
 let chartMode = 'moyenne'; // 'moyenne' | 'mediane'
 let currentChartData = null;
+let coursesCache = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   const user = await API.requireOnboarded();
@@ -66,7 +67,8 @@ async function loadGlobalStats() {
   const pAvg = stats.personal_avg ? `${parseFloat(stats.personal_avg).toFixed(1)}%` : '—';
   const pMed = stats.personal_median ? `${parseFloat(stats.personal_median).toFixed(1)}%` : '—';
   const gAvg = stats.group_avg ? `${parseFloat(stats.group_avg).toFixed(1)}%` : '—';
-  const gMed = stats.group_median ? `${parseFloat(stats.group_median).toFixed(1)}%` : '—';
+  const showGroupMed = stats.group_member_count >= 3 && stats.group_median != null;
+  const gMed = showGroupMed ? `${parseFloat(stats.group_median).toFixed(1)}%` : null;
   const gw = parseInt(stats.graded_weight) || 0;
   const tw = parseInt(stats.total_weight) || 0;
 
@@ -80,7 +82,7 @@ async function loadGlobalStats() {
     <div class="global-stat">
       <div class="global-stat-label">Moy. groupe</div>
       <div class="global-stat-value" style="font-size:1.5rem">${gAvg}</div>
-      <div class="global-stat-sub">Méd. groupe ${gMed}</div>
+      ${gMed !== null ? `<div class="global-stat-sub">Méd. groupe ${gMed}</div>` : ''}
     </div>
     <div class="divider-v"></div>
     <div class="global-stat">
@@ -226,6 +228,7 @@ async function loadCourses() {
 
   const url = currentYear ? `/dashboard/cours?annee=${encodeURIComponent(currentYear)}` : '/dashboard/cours';
   const courses = await API.get(url);
+  coursesCache = courses;
 
   document.getElementById('controls-row').style.display = courses?.length ? '' : 'none';
 
@@ -237,7 +240,8 @@ async function loadCourses() {
   grid.innerHTML = courses.map(c => {
     const pAvg = c.personal_avg ? `${parseFloat(c.personal_avg).toFixed(1)}%` : '—';
     const gAvg = c.group_avg ? `${parseFloat(c.group_avg).toFixed(1)}%` : '—';
-    const gMed = c.group_median ? `${parseFloat(c.group_median).toFixed(1)}%` : '—';
+    const showGMed = c.member_count >= 3 && c.group_median != null;
+    const gMed = showGMed ? `${parseFloat(c.group_median).toFixed(1)}%` : null;
     const progress = c.total_weight > 0 ? (c.graded_weight / c.total_weight) * 100 : 0;
 
     return `<div class="course-card" data-group-id="${c.group_id}" onclick="openDetail(${c.group_id}, this)">
@@ -258,10 +262,10 @@ async function loadCourses() {
           <div class="avg-label">Moy. groupe</div>
           <div class="avg-value group">${gAvg}</div>
         </div>
-        <div class="avg-item">
+        ${gMed !== null ? `<div class="avg-item">
           <div class="avg-label">Méd. groupe</div>
           <div class="avg-value" style="color:var(--warning)">${gMed}</div>
-        </div>
+        </div>` : ''}
       </div>
       <div class="progress-bar-wrap">
         <div class="progress-label">${c.graded_weight} / ${c.total_weight} pts pondérés saisis</div>
@@ -315,15 +319,10 @@ function renderDetailStats(travaux, graphique) {
       : sortedPct[Math.floor(sortedPct.length / 2)]
     : null;
 
-  const groupMedValues = travaux
-    .filter(t => t.group_median_pct !== null)
-    .map(t => parseFloat(t.group_median_pct))
-    .sort((a, b) => a - b);
-  const groupMed = groupMedValues.length > 0
-    ? groupMedValues.length % 2 === 0
-      ? (groupMedValues[groupMedValues.length / 2 - 1] + groupMedValues[groupMedValues.length / 2]) / 2
-      : groupMedValues[Math.floor(groupMedValues.length / 2)]
-    : null;
+  // Use the backend-computed group median (median of member weighted averages) from the courses list
+  const cachedCourse = coursesCache?.find(c => c.group_id === selectedGroupId);
+  const showGroupMed = cachedCourse?.member_count >= 3 && cachedCourse?.group_median != null;
+  const groupMed = showGroupMed ? parseFloat(cachedCourse.group_median) : null;
 
   const gw = graphique?.graded_weight || 0;
   const tw = graphique?.total_weight || 0;
@@ -341,10 +340,10 @@ function renderDetailStats(travaux, graphique) {
       <div class="stat-label">Moy. groupe pondérée</div>
       <div class="stat-value" style="color:var(--success)">${groupAvg !== null ? parseFloat(groupAvg).toFixed(1) + '%' : '—'}</div>
     </div>
-    <div class="stat-card">
+    ${groupMed !== null ? `<div class="stat-card">
       <div class="stat-label">Méd. groupe</div>
-      <div class="stat-value" style="color:var(--warning);font-size:1.4rem">${groupMed !== null ? groupMed.toFixed(1) + '%' : '—'}</div>
-    </div>
+      <div class="stat-value" style="color:var(--warning);font-size:1.4rem">${groupMed.toFixed(1)}%</div>
+    </div>` : ''}
     <div class="stat-card">
       <div class="stat-label">Évaluations notées</div>
       <div class="stat-value" style="font-size:1.4rem">${graded.length} / ${travaux.length}</div>

@@ -59,7 +59,8 @@ router.get('/resume', async (req, res) => {
         ROUND(AVG(member_avg), 2) AS group_avg,
         ROUND(CAST(
           PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY member_avg) AS NUMERIC
-        ), 2) AS group_median
+        ), 2) AS group_median,
+        COUNT(*) AS group_member_count
       FROM (
         SELECT
           us.user_id,
@@ -69,6 +70,7 @@ router.get('/resume', async (req, res) => {
         JOIN user_scores us ON us.assignment_id = a.id
         JOIN groups g ON g.id = a.group_id
         JOIN group_members gm ON gm.group_id = g.id AND gm.user_id = $1
+        JOIN group_members gm2 ON gm2.user_id = us.user_id AND gm2.group_id = g.id
         WHERE true ${yearClause}
         GROUP BY us.user_id
       ) t
