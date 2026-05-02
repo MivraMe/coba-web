@@ -4,6 +4,7 @@ const { requireAuth, requireRegularUser } = require('../middleware/auth');
 const { encrypt } = require('../services/crypto');
 const { fetchNotes, fetchProfile, parseAssignment, getCanonicalSchoolYear } = require('../services/portalApi');
 const { processAssignments } = require('../services/dataSync');
+const { sendSms } = require('../services/notifications/sms');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -145,16 +146,29 @@ router.post('/groupes', async (req, res) => {
 router.post('/notifications', async (req, res) => {
   const { recovery_email, phone, notify_email, notify_sms } = req.body;
   try {
-    await pool.query(
+    const { rows } = await pool.query(
       `UPDATE users SET
         recovery_email = COALESCE($1, recovery_email),
         phone = COALESCE($2, phone),
         notify_email = $3,
         notify_sms = $4,
         onboarding_step = GREATEST(onboarding_step, 4)
-       WHERE id = $5`,
+       WHERE id = $5
+       RETURNING full_name, phone AS saved_phone, notify_sms AS saved_notify_sms`,
       [recovery_email || null, phone || null, !!notify_email, !!notify_sms, req.user.id]
     );
+
+    if (notify_sms && phone) {
+      const firstName = (rows[0]?.full_name || '').split(' ')[0] || 'étudiant(e)';
+      const welcomeMsg =
+        `Bonjour ${firstName} ! 👋 Bienvenue sur NotesQC. ` +
+        `Vous recevrez désormais vos nouvelles notes et notifications sur ce numéro. ` +
+        `Bonne session !`;
+      sendSms(phone, welcomeMsg).catch(err =>
+        console.error('Erreur envoi SMS de bienvenue:', err.message)
+      );
+    }
+
     res.json({ ok: true });
   } catch (err) {
     console.error(err);
