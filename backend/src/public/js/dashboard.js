@@ -12,7 +12,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!user) return;
   setupNav(user);
 
-  document.getElementById('sync-btn').addEventListener('click', handleSync);
   document.getElementById('detail-close').addEventListener('click', closeDetail);
   document.getElementById('global-expand-btn').addEventListener('click', toggleGlobalExpand);
   document.getElementById('toggle-avg').addEventListener('click', () => setChartMode('moyenne'));
@@ -36,7 +35,7 @@ async function loadYears() {
   if (!years || years.length === 0) {
     container.innerHTML = '';
     currentYear = null;
-    await Promise.all([loadGlobalStats(), loadCourses()]);
+    await Promise.all([loadGlobalStats(), loadCourses(), loadSyncStatus()]);
     return;
   }
 
@@ -55,7 +54,7 @@ async function loadYears() {
     });
   });
 
-  await Promise.all([loadGlobalStats(), loadCourses()]);
+  await Promise.all([loadGlobalStats(), loadCourses(), loadSyncStatus()]);
 }
 
 async function loadGlobalStats() {
@@ -496,24 +495,43 @@ function closeDetail() {
   selectedGroupId = null;
 }
 
-async function handleSync() {
-  const btn = document.getElementById('sync-btn');
-  const alert = document.getElementById('sync-alert');
-  hideAlert(alert);
-  setLoading(btn, true, 'Sync…');
+async function loadSyncStatus() {
+  const data = await API.get('/dashboard/sync-status');
+  const el = document.getElementById('sync-info');
+  if (!el) return;
+  if (!data) { el.textContent = ''; return; }
 
-  const res = await API.request('POST', '/dashboard/synchroniser');
-  setLoading(btn, false);
-  if (!res) return;
+  const lines = [];
 
-  if (res.ok) {
-    showAlert(alert, 'Synchronisation terminée.', 'success');
-    closeDetail();
-    await Promise.all([loadGlobalStats(), loadCourses()]);
-  } else {
-    const data = await res.json();
-    showAlert(alert, data.error || 'Erreur lors de la synchronisation');
+  if (data.last_synced) {
+    const diff = Math.round((Date.now() - new Date(data.last_synced)) / 1000);
+    lines.push('Dernière syncro ' + formatRelativeAgo(diff));
   }
+
+  if (data.next_run_at) {
+    const diffNext = Math.round((new Date(data.next_run_at) - Date.now()) / 1000);
+    if (diffNext > 0) {
+      lines.push('Prochaine syncro dans ' + formatRelativeSoon(diffNext));
+    }
+  }
+
+  el.innerHTML = lines.join('<br>');
+}
+
+function formatRelativeAgo(seconds) {
+  if (seconds < 60) return 'il y a ' + seconds + 's';
+  const m = Math.floor(seconds / 60);
+  if (m < 60) return 'il y a ' + m + ' min';
+  const h = Math.floor(m / 60);
+  if (h < 24) return 'il y a ' + h + 'h';
+  return 'il y a ' + Math.floor(h / 24) + 'j';
+}
+
+function formatRelativeSoon(seconds) {
+  if (seconds < 60) return seconds + 's';
+  const m = Math.floor(seconds / 60);
+  if (m < 60) return m + ' min';
+  return Math.floor(m / 60) + 'h';
 }
 
 function escapeHtml(str) {
