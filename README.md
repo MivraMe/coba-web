@@ -2,6 +2,18 @@
 
 A grade-tracking web app for students at Collège Esther-Blondin. Students link their school portal credentials, the backend periodically fetches their grades, and they can compare results against anonymized group averages and medians.
 
+## Screenshots
+
+<!-- Replace the placeholder paths with your actual image files -->
+
+| Dashboard | Groups |
+|---|---|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Groups](docs/screenshots/groups.png) |
+
+| Onboarding | Admin Panel |
+|---|---|
+| ![Onboarding](docs/screenshots/onboarding.png) | ![Admin](docs/screenshots/admin.png) |
+
 ## Features
 
 - Secure portal credential storage (AES-256-CBC encryption)
