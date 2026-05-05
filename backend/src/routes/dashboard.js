@@ -2,6 +2,7 @@ const express = require('express');
 const { pool } = require('../db');
 const { requireAuth, requireRegularUser } = require('../middleware/auth');
 const { syncUserData } = require('../services/dataSync');
+const { getSchedulerStatus } = require('../services/scheduler');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -311,13 +312,21 @@ router.get('/cours/:groupId/graphique', async (req, res) => {
   }
 });
 
-// POST /api/dashboard/synchroniser
-router.post('/synchroniser', async (req, res) => {
+// GET /api/dashboard/sync-status
+router.get('/sync-status', async (req, res) => {
   try {
-    await syncUserData(req.user.id);
-    res.json({ ok: true });
+    const { rows } = await pool.query(
+      `SELECT MAX(refreshed_at) AS last_synced
+       FROM group_members
+       WHERE user_id = $1`,
+      [req.user.id]
+    );
+    const { nextRunAt } = getSchedulerStatus();
+    res.json({
+      last_synced: rows[0].last_synced,
+      next_run_at: nextRunAt,
+    });
   } catch (err) {
-    if (err.code) return res.status(503).json({ error: err.message, code: err.code });
     console.error(err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
