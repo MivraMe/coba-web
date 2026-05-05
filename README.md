@@ -6,15 +6,19 @@ A grade-tracking web app for students at Collège Esther-Blondin. Students link 
 
 ## Screenshots
 
-<!-- Replace the placeholder paths with your actual image files -->
+**Dashboard**
 
-| Dashboard | Groups |
+| Light theme | Dark theme |
 |---|---|
-| ![Dashboard](docs/screenshots/dashboard.png) | ![Groups](docs/screenshots/groups.png) |
+| ![Dashboard – light](docs/dash_whitetheme.png) | ![Dashboard – dark](docs/dash_black-theme.png) |
 
-| Onboarding | Admin Panel |
+| Groups | Admin – Overview |
 |---|---|
-| ![Onboarding](docs/screenshots/onboarding.png) | ![Admin](docs/screenshots/admin.png) |
+| ![Groups](docs/dahs_groups.png) | ![Admin main](docs/admin_main.png) |
+
+| Admin – Users | Admin – Portal test |
+|---|---|
+| ![Admin users](docs/admin_user.png) | ![Admin portal test](docs/admin_test.png) |
 
 ## Features
 
