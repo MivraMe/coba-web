@@ -48,8 +48,9 @@ app.use('/api/groupes', require('./routes/groups'));
 app.use('/api/compte', require('./routes/account'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/invitations', require('./routes/invitations'));
+app.use('/api/parent', require('./routes/parent'));
 
-const pages = ['register', 'onboarding', 'dashboard', 'groupes', 'compte', 'admin', 'rejoindre'];
+const pages = ['register', 'onboarding', 'dashboard', 'groupes', 'compte', 'admin', 'rejoindre', 'parent-register', 'parent-dashboard', 'parent-account'];
 pages.forEach(page => {
   app.get(`/${page}`, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', `${page}.html`));

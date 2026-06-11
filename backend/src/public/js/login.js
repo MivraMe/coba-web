@@ -1,4 +1,11 @@
 document.addEventListener('DOMContentLoaded', async () => {
+  // Si un token parent est déjà valide, rediriger vers le dashboard parent
+  if (PARENT.getToken()) {
+    const res = await PARENT.request('GET', '/parent/me');
+    if (res && res.ok) { window.location.href = '/parent-dashboard'; return; }
+    PARENT.clearToken(); PARENT.clearParent();
+  }
+
   await API.requireAnonymous();
 
   const form = document.getElementById('login-form');
@@ -104,6 +111,55 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     await finishLogin(data);
+  });
+
+  // ── Toggle étudiant / parent ─────────────────────────────────────────────────
+
+  const tabStudent = document.getElementById('tab-student');
+  const tabParent = document.getElementById('tab-parent');
+  const parentSection = document.getElementById('parent-section');
+
+  function showStudentMode() {
+    form.classList.remove('hidden');
+    loginFooter.classList.remove('hidden');
+    parentSection.classList.add('hidden');
+    tabStudent.style.background = 'var(--primary)'; tabStudent.style.color = '#fff'; tabStudent.style.fontWeight = '600';
+    tabParent.style.background = 'var(--surface)'; tabParent.style.color = 'var(--text-2)'; tabParent.style.fontWeight = '';
+    hideAlert(alert);
+  }
+
+  function showParentMode() {
+    form.classList.add('hidden');
+    loginFooter.classList.add('hidden');
+    parentSection.classList.remove('hidden');
+    tabParent.style.background = 'var(--primary)'; tabParent.style.color = '#fff'; tabParent.style.fontWeight = '600';
+    tabStudent.style.background = 'var(--surface)'; tabStudent.style.color = 'var(--text-2)'; tabStudent.style.fontWeight = '';
+    hideAlert(alert);
+  }
+
+  tabStudent.addEventListener('click', showStudentMode);
+  tabParent.addEventListener('click', showParentMode);
+
+  // Connexion parent
+  document.getElementById('parent-login-btn').addEventListener('click', async () => {
+    const emailVal = document.getElementById('parent-email').value.trim();
+    const passVal = document.getElementById('parent-password').value;
+    if (!emailVal || !passVal) { showAlert(alert, 'Veuillez remplir tous les champs.'); return; }
+
+    const loginBtn = document.getElementById('parent-login-btn');
+    setLoading(loginBtn, true, 'Connexion…');
+    hideAlert(alert);
+
+    const res = await PARENT.request('POST', '/parent/login', { email: emailVal, password: passVal });
+    setLoading(loginBtn, false, 'Se connecter (parent)');
+    if (!res) return;
+
+    const data = await res.json();
+    if (!res.ok) { showAlert(alert, data.error || 'Identifiants incorrects'); return; }
+
+    PARENT.setToken(data.token);
+    PARENT.setParent(data.parent);
+    window.location.href = '/parent-dashboard';
   });
 
   // ── Réinitialisation de mot de passe ────────────────────────────────────────

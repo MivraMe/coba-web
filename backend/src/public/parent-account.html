@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mon compte — Espace parent · NotesQC</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script>(function(){var t=localStorage.getItem('coba_theme');if(t==='dark')document.documentElement.classList.add('dark');})()</script>
+  <style>
+    .child-row {
+      display: flex; align-items: center; gap: .75rem;
+      padding: .875rem; border: 1.5px solid var(--border);
+      border-radius: var(--radius); margin-bottom: .75rem;
+      background: var(--surface);
+    }
+    .child-row .avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: #7c3aed; color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size:.9rem; font-weight: 700; flex-shrink: 0;
+    }
+    .child-row .child-info { flex: 1; }
+    .child-row .child-name { font-weight: 600; }
+    .child-row .child-code { font-size: .8rem; color: var(--text-2); }
+    .add-child-form { display: none; margin-top: .75rem; }
+    .add-child-form.open { display: block; }
+  </style>
+</head>
+<body>
+  <nav class="nav" id="main-nav">
+    <a class="nav-brand" href="/parent-dashboard">
+      <img src="/logo/notesQC_white.png" alt="NotesQC" class="nav-logo">
+    </a>
+    <div class="nav-links" id="navLinks">
+      <a href="/parent-dashboard" class="nav-link">Tableau de bord</a>
+      <a href="/parent-account" class="nav-link active">Mon compte</a>
+    </div>
+    <div class="nav-right">
+      <span class="nav-email" id="navEmail"></span>
+      <button class="theme-btn" id="themeBtnNav" title="Basculer le thème"><span data-theme-icon></span></button>
+      <button class="nav-logout" id="navLogout">Déconnexion</button>
+    </div>
+  </nav>
+
+  <div class="page">
+    <div class="container" style="max-width:700px">
+
+      <h1 class="page-title">Mon compte parent</h1>
+
+      <div id="alert" class="alert alert-hidden" style="margin-bottom:1rem"></div>
+
+      <!-- Informations personnelles -->
+      <div class="card mb-3">
+        <div class="card-header"><h2 class="card-title">Informations personnelles</h2></div>
+        <div class="card-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+            <div class="form-group">
+              <label class="form-label" for="first-name">Prénom</label>
+              <input type="text" id="first-name" class="form-control" autocomplete="given-name">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="last-name">Nom</label>
+              <input type="text" id="last-name" class="form-control" autocomplete="family-name">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="parent-email">Courriel</label>
+            <input type="email" id="parent-email" class="form-control" autocomplete="email">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="parent-phone">Téléphone (optionnel)</label>
+            <input type="tel" id="parent-phone" class="form-control" autocomplete="tel">
+          </div>
+          <button class="btn btn-primary" id="save-profile-btn">Enregistrer les modifications</button>
+        </div>
+      </div>
+
+      <!-- Changer le mot de passe -->
+      <div class="card mb-3">
+        <div class="card-header"><h2 class="card-title">Changer le mot de passe</h2></div>
+        <div class="card-body">
+          <div class="form-group">
+            <label class="form-label" for="current-pass">Mot de passe actuel</label>
+            <input type="password" id="current-pass" class="form-control" autocomplete="current-password">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="new-pass">Nouveau mot de passe</label>
+            <input type="password" id="new-pass" class="form-control" placeholder="8 caractères minimum" autocomplete="new-password">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="new-pass2">Confirmer le nouveau mot de passe</label>
+            <input type="password" id="new-pass2" class="form-control" autocomplete="new-password">
+          </div>
+          <button class="btn btn-primary" id="save-password-btn">Changer le mot de passe</button>
+        </div>
+      </div>
+
+      <!-- Mes enfants -->
+      <div class="card mb-3">
+        <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
+          <h2 class="card-title">Mes enfants</h2>
+          <button class="btn btn-ghost btn-sm" id="toggle-add-child">+ Ajouter un enfant</button>
+        </div>
+        <div class="card-body">
+
+          <!-- Formulaire d'ajout -->
+          <div class="add-child-form" id="add-child-form">
+            <p class="text-sm text-muted mb-2">Entrez le code permanent de votre enfant. Il doit déjà avoir un compte NotesQC.</p>
+            <div style="display:flex;gap:.5rem;align-items:flex-end">
+              <div class="form-group" style="flex:1;margin-bottom:0">
+                <label class="form-label" for="add-code">Code permanent</label>
+                <input type="text" id="add-code" class="form-control" placeholder="ex. ABCD12345678" style="text-transform:uppercase">
+              </div>
+              <button class="btn btn-primary" id="add-child-btn" style="flex-shrink:0">Ajouter</button>
+            </div>
+            <p class="text-sm text-muted mt-1">
+              Si votre enfant n'est pas encore inscrit, rendez-vous sur
+              <a href="/parent-register">la page d'inscription parent</a>.
+            </p>
+            <hr style="margin:.75rem 0;border-color:var(--border)">
+          </div>
+
+          <div id="children-list">
+            <div class="loading-overlay"><span class="spinner spinner-dark"></span></div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="/parent-dashboard">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+      Tableau de bord
+    </a>
+    <a href="/parent-account" class="active">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+      Mon compte
+    </a>
+  </nav>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/parent-account.js"></script>
+  <script src="/js/theme.js"></script>
+  <script src="/js/cookie-banner.js"></script>
+</body>
+</html>

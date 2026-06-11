@@ -183,6 +183,31 @@ router.post('/terminer', async (req, res) => {
       'UPDATE users SET onboarding_step = 5, onboarding_completed = true WHERE id = $1',
       [req.user.id]
     );
+
+    // Activer les liens parents en attente pour ce code permanent
+    const { rows: userRows } = await pool.query(
+      'SELECT permanent_code FROM users WHERE id = $1',
+      [req.user.id]
+    );
+    const permanentCode = userRows[0]?.permanent_code;
+    if (permanentCode) {
+      const { rows: pending } = await pool.query(
+        `SELECT parent_id FROM parent_pending_links
+         WHERE permanent_code = $1 AND notified = false`,
+        [permanentCode]
+      );
+      for (const link of pending) {
+        await pool.query(
+          `INSERT INTO parent_child_links (parent_id, child_user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+          [link.parent_id, req.user.id]
+        );
+        await pool.query(
+          `UPDATE parent_pending_links SET notified = true WHERE parent_id = $1 AND permanent_code = $2`,
+          [link.parent_id, permanentCode]
+        );
+      }
+    }
+
     res.json({ ok: true });
   } catch (err) {
     console.error(err);

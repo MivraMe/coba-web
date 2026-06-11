@@ -15,6 +15,12 @@
         <p class="auth-sub">Connexion à votre espace</p>
       </div>
 
+      <!-- Toggle étudiant / parent -->
+      <div style="display:flex;border:1.5px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;margin-bottom:1.25rem">
+        <button id="tab-student" style="flex:1;padding:.5rem;font-size:.875rem;background:var(--primary);color:#fff;border:none;cursor:pointer;font-weight:600">Étudiant</button>
+        <button id="tab-parent" style="flex:1;padding:.5rem;font-size:.875rem;background:var(--surface);color:var(--text-2);border:none;cursor:pointer">Parent</button>
+      </div>
+
       <div id="alert" class="alert alert-hidden"></div>
 
       <form id="login-form" method="POST">
@@ -33,6 +39,22 @@
         Pas encore de compte ? <a href="/register">Créer un compte</a>
         &nbsp;·&nbsp; <a href="#" id="forgot-link">Mot de passe oublié ?</a>
       </p>
+
+      <!-- Section parent -->
+      <div id="parent-section" class="hidden">
+        <div class="form-group">
+          <label class="form-label" for="parent-email">Courriel</label>
+          <input type="email" id="parent-email" class="form-control" placeholder="vous@exemple.com" autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="parent-password">Mot de passe</label>
+          <input type="password" id="parent-password" class="form-control" placeholder="••••••••" autocomplete="current-password">
+        </div>
+        <button type="button" class="btn btn-primary btn-block mt-2" id="parent-login-btn">Se connecter (parent)</button>
+        <p class="text-center mt-2 text-sm text-muted">
+          Pas encore de compte parent ? <a href="/parent-register">Créer un compte parent</a>
+        </p>
+      </div>
 
       <!-- Étape TOTP -->
       <div id="totp-section" class="hidden">

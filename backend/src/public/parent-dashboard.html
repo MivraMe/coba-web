@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tableau de bord — Espace parent · NotesQC</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script>(function(){var t=localStorage.getItem('coba_theme');if(t==='dark')document.documentElement.classList.add('dark');})()</script>
+  <style>
+    .global-header {
+      background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      color: #fff;
+      margin-bottom: 1.5rem;
+    }
+    .global-header h2 { font-size: 1rem; font-weight: 600; opacity: .8; margin-bottom: 1rem; }
+    .global-stats-row { display: flex; gap: 2rem; flex-wrap: wrap; }
+    .global-stat-label { font-size: .75rem; opacity: .7; text-transform: uppercase; letter-spacing: .05em; }
+    .global-stat-value { font-size: 1.9rem; font-weight: 800; line-height: 1.1; }
+    .global-stat-sub { font-size: .8rem; opacity: .7; margin-top: .1rem; }
+    .divider-v { width: 1px; background: rgba(255,255,255,.25); align-self: stretch; }
+    .global-expand-btn {
+      background: rgba(255,255,255,.15); border: none; color: #fff;
+      padding: .35rem .75rem; border-radius: var(--radius-sm);
+      cursor: pointer; font-size: .85rem; margin-top: 1rem;
+      transition: background .15s;
+    }
+    .global-expand-btn:hover { background: rgba(255,255,255,.25); }
+    .global-expanded { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid rgba(255,255,255,.2); }
+    .global-chart-wrap { position: relative; height: 220px; }
+    .toggle-bar { display: inline-flex; border: 1.5px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+    .toggle-btn { padding: .35rem .85rem; font-size: .875rem; background: var(--surface); border: none; cursor: pointer; color: var(--text-2); transition: background .15s, color .15s; }
+    .toggle-btn.active { background: var(--primary); color: #fff; }
+    .child-selector {
+      display: flex; align-items: center; gap: .75rem;
+      margin-bottom: 1.25rem; flex-wrap: wrap;
+    }
+    .child-tab {
+      display: flex; align-items: center; gap: .5rem;
+      padding: .5rem 1rem; border-radius: var(--radius);
+      border: 1.5px solid var(--border); cursor: pointer;
+      background: var(--surface); font-size: .9rem;
+      transition: all .15s; color: var(--text);
+    }
+    .child-tab.active { border-color: #7c3aed; background: color-mix(in srgb,#7c3aed 10%,var(--surface)); color: #7c3aed; font-weight: 600; }
+    .child-tab .avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: #7c3aed; color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .75rem; font-weight: 700;
+    }
+    .parent-badge {
+      display: inline-flex; align-items: center; gap: .3rem;
+      background: color-mix(in srgb,#7c3aed 12%,var(--surface));
+      color: #7c3aed; border-radius: var(--radius-sm);
+      padding: .2rem .6rem; font-size: .78rem; font-weight: 600; margin-bottom: .75rem;
+    }
+    .readonly-notice {
+      background: color-mix(in srgb,#f59e0b 10%,var(--surface));
+      border-left: 3px solid #f59e0b; border-radius: var(--radius-sm);
+      padding: .5rem .875rem; font-size: .8rem; color: var(--text-2); margin-bottom: 1rem;
+    }
+    .no-children {
+      text-align: center; padding: 3rem 1rem; color: var(--text-2);
+    }
+    .no-children .icon { font-size: 3rem; margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+  <nav class="nav" id="main-nav">
+    <a class="nav-brand" href="/parent-dashboard">
+      <img src="/logo/notesQC_white.png" alt="NotesQC" class="nav-logo">
+    </a>
+    <div class="nav-links" id="navLinks">
+      <a href="/parent-dashboard" class="nav-link active">Tableau de bord</a>
+      <a href="/parent-account" class="nav-link">Mon compte</a>
+    </div>
+    <div class="nav-right">
+      <span class="nav-email" id="navEmail"></span>
+      <button class="theme-btn" id="themeBtnNav" title="Basculer le thème" aria-label="Basculer le thème"><span data-theme-icon></span></button>
+      <button class="nav-logout" id="navLogout">Déconnexion</button>
+    </div>
+  </nav>
+
+  <div class="page">
+    <div class="container">
+
+      <div class="parent-badge">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+        Espace parent — lecture seule
+      </div>
+
+      <!-- Sélecteur d'enfant -->
+      <div class="child-selector" id="child-selector">
+        <div style="opacity:.6;font-size:.9rem">Chargement…</div>
+      </div>
+
+      <!-- Pas d'enfants -->
+      <div class="no-children hidden" id="no-children">
+        <div class="icon">👶</div>
+        <h3 style="font-size:1.1rem;font-weight:600;margin-bottom:.5rem">Aucun enfant lié</h3>
+        <p class="text-sm text-muted mb-2">Ajoutez un enfant depuis votre compte pour voir ses notes.</p>
+        <a href="/parent-account" class="btn btn-primary">Gérer mes enfants</a>
+      </div>
+
+      <!-- Contenu principal (visible quand un enfant est sélectionné) -->
+      <div id="main-content" class="hidden">
+
+        <div class="readonly-notice">
+          Vue en lecture seule — vous consultez les notes de <strong id="active-child-name"></strong>.
+        </div>
+
+        <!-- Header stats global -->
+        <div class="global-header" id="global-header">
+          <div class="flex-between" style="align-items:flex-start">
+            <h2>Aperçu général</h2>
+          </div>
+          <div id="global-stats-row" class="global-stats-row">
+            <div style="opacity:.6;font-size:.9rem">Chargement…</div>
+          </div>
+          <button class="global-expand-btn" id="global-expand-btn">▼ Afficher plus</button>
+          <div class="global-expanded hidden" id="global-expanded">
+            <div class="global-chart-wrap">
+              <canvas id="global-chart"></canvas>
+            </div>
+            <div style="position:relative;height:200px;margin-top:1.25rem">
+              <canvas id="global-line-chart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filtre d'année -->
+        <div class="year-filter" id="year-filter">
+          <div class="loading-overlay"><span class="spinner spinner-dark"></span></div>
+        </div>
+
+        <!-- Grille de cours -->
+        <div class="courses-grid" id="courses-grid">
+          <div class="loading-overlay"><span class="spinner spinner-dark"></span></div>
+        </div>
+
+        <!-- Panneau détail -->
+        <div class="detail-panel hidden" id="detail-panel">
+          <div class="detail-header">
+            <div>
+              <div class="course-code" id="detail-code"></div>
+              <div class="detail-title" id="detail-name"></div>
+            </div>
+            <div class="toggle-bar">
+              <button class="toggle-btn active" id="toggle-avg">Moyenne</button>
+              <button class="toggle-btn" id="toggle-med">Médiane</button>
+            </div>
+            <button class="btn btn-ghost btn-sm" id="detail-close">✕ Fermer</button>
+          </div>
+
+          <div class="stats-grid" id="detail-stats"></div>
+
+          <div class="chart-container">
+            <canvas id="grade-chart"></canvas>
+          </div>
+
+          <h3 style="font-size:.95rem;font-weight:600;margin-bottom:.75rem">Détail des évaluations</h3>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Évaluation</th>
+                  <th>Catégorie</th>
+                  <th>Pond.</th>
+                  <th>Date</th>
+                  <th>Note</th>
+                  <th>Moy. groupe</th>
+                  <th>Méd. groupe</th>
+                </tr>
+              </thead>
+              <tbody id="assignments-table"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="/parent-dashboard" class="active">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+      Tableau de bord
+    </a>
+    <a href="/parent-account">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+      Mon compte
+    </a>
+  </nav>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/parent-dashboard.js"></script>
+  <script src="/js/theme.js"></script>
+  <script src="/js/cookie-banner.js"></script>
+</body>
+</html>

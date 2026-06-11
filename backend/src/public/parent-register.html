@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inscription parent — NotesQC</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script>(function(){var t=localStorage.getItem('coba_theme');if(t==='dark')document.documentElement.classList.add('dark');})()</script>
+  <style>
+    .steps-bar { display:flex; gap:.5rem; margin-bottom:1.5rem; }
+    .step-dot {
+      flex:1; height:4px; border-radius:2px;
+      background:var(--border); transition:background .3s;
+    }
+    .step-dot.done { background:var(--primary); }
+    .step-dot.active { background:var(--primary); opacity:.6; }
+    .step-section { display:none; }
+    .step-section.active { display:block; }
+    .child-card {
+      display:flex; align-items:center; gap:.75rem;
+      border:1.5px solid var(--primary); border-radius:var(--radius);
+      padding:.875rem 1rem; background:color-mix(in srgb,var(--primary) 8%,var(--surface));
+      margin-bottom:1rem;
+    }
+    .child-card .avatar {
+      width:44px; height:44px; border-radius:50%;
+      background:var(--primary); color:#fff;
+      display:flex; align-items:center; justify-content:center;
+      font-size:1.1rem; font-weight:700; flex-shrink:0;
+    }
+    .child-card .child-name { font-weight:600; }
+    .child-card .child-code { font-size:.8rem; color:var(--text-2); }
+    .info-box {
+      background:color-mix(in srgb,var(--primary) 8%,var(--surface));
+      border-left:3px solid var(--primary); border-radius:var(--radius-sm);
+      padding:.75rem 1rem; font-size:.875rem; color:var(--text-2); margin-bottom:1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-wrap">
+    <div class="auth-card" style="max-width:480px">
+      <div class="auth-logo">
+        <img src="/logo/notesQc_black.png" alt="NotesQC" class="auth-logo-img">
+        <p class="auth-sub">Inscription — Espace parent</p>
+      </div>
+
+      <div class="steps-bar">
+        <div class="step-dot active" id="dot-1"></div>
+        <div class="step-dot" id="dot-2"></div>
+        <div class="step-dot" id="dot-3"></div>
+        <div class="step-dot" id="dot-4"></div>
+      </div>
+
+      <div id="alert" class="alert alert-hidden"></div>
+
+      <!-- Étape 1 : Recherche par code permanent -->
+      <div class="step-section active" id="step-1">
+        <h2 style="font-size:1.1rem;font-weight:700;margin-bottom:.25rem">Trouver votre enfant</h2>
+        <p class="text-sm text-muted mb-2">Entrez le code permanent de votre enfant pour vérifier s'il est déjà inscrit sur NotesQC.</p>
+        <div class="form-group">
+          <label class="form-label" for="perm-code">Code permanent de l'enfant</label>
+          <input type="text" id="perm-code" class="form-control" placeholder="ex. ABCD12345678" style="text-transform:uppercase;letter-spacing:.05em">
+        </div>
+        <button class="btn btn-primary btn-block" id="lookup-btn">Rechercher</button>
+        <p class="text-center mt-2 text-sm text-muted">
+          Déjà un compte parent ? <a href="/">Se connecter</a>
+        </p>
+      </div>
+
+      <!-- Étape 1b : Enfant non trouvé — options -->
+      <div class="step-section" id="step-1b">
+        <h2 style="font-size:1.1rem;font-weight:700;margin-bottom:.25rem">Enfant non trouvé</h2>
+        <p class="text-sm text-muted mb-2">Aucun compte étudiant trouvé pour ce code permanent. Votre enfant n'est peut-être pas encore inscrit sur NotesQC.</p>
+        <div style="display:flex;flex-direction:column;gap:.75rem;margin-bottom:1rem">
+          <button class="btn btn-primary btn-block" id="btn-use-portal">Entrer les identifiants du portail de mon enfant</button>
+          <button class="btn btn-ghost btn-block" id="btn-wait-child">Demander à mon enfant de s'inscrire (je serai notifié)</button>
+          <button class="btn btn-ghost btn-block" id="btn-retry-code">Réessayer avec un autre code</button>
+        </div>
+      </div>
+
+      <!-- Étape 2 : Identifiants du portail de l'enfant -->
+      <div class="step-section" id="step-2">
+        <h2 style="font-size:1.1rem;font-weight:700;margin-bottom:.25rem">Identifiants du portail scolaire</h2>
+        <div class="info-box">
+          Ces informations sont celles que votre enfant utilise pour se connecter au portail du Collège Esther-Blondin, pas votre propre compte.
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="portal-user">Nom d'utilisateur de l'enfant</label>
+          <input type="text" id="portal-user" class="form-control" placeholder="identifiant portail de l'enfant" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="portal-pass">Mot de passe du portail scolaire de l'enfant</label>
+          <input type="password" id="portal-pass" class="form-control" placeholder="••••••••" autocomplete="off">
+        </div>
+        <button class="btn btn-primary btn-block" id="portal-verify-btn">Vérifier et continuer</button>
+        <p class="text-center mt-1 text-sm"><a href="#" id="back-from-portal">← Retour</a></p>
+      </div>
+
+      <!-- Étape 3 : Créer le compte parent -->
+      <div class="step-section" id="step-3">
+        <h2 style="font-size:1.1rem;font-weight:700;margin-bottom:.25rem">Créer votre compte parent</h2>
+
+        <div id="child-confirm-card" class="child-card hidden">
+          <div class="avatar" id="child-avatar"></div>
+          <div>
+            <div class="child-name" id="child-name-display"></div>
+            <div class="child-code" id="child-code-display"></div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="p-first">Prénom *</label>
+          <input type="text" id="p-first" class="form-control" placeholder="Votre prénom" autocomplete="given-name">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="p-last">Nom *</label>
+          <input type="text" id="p-last" class="form-control" placeholder="Votre nom de famille" autocomplete="family-name">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="p-email">Courriel *</label>
+          <input type="email" id="p-email" class="form-control" placeholder="vous@exemple.com" autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="p-phone">Téléphone (optionnel)</label>
+          <input type="tel" id="p-phone" class="form-control" placeholder="514-555-0100" autocomplete="tel">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="p-pass">Mot de passe *</label>
+          <input type="password" id="p-pass" class="form-control" placeholder="8 caractères minimum" autocomplete="new-password">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="p-pass2">Confirmer le mot de passe *</label>
+          <input type="password" id="p-pass2" class="form-control" placeholder="••••••••" autocomplete="new-password">
+        </div>
+        <div class="form-check mb-2">
+          <input type="checkbox" id="p-terms">
+          <label for="p-terms">J'accepte les conditions d'utilisation</label>
+        </div>
+        <button class="btn btn-primary btn-block" id="register-btn">Créer mon compte</button>
+      </div>
+
+      <!-- Étape 4 : Invitation de l'enfant (optionnelle) -->
+      <div class="step-section" id="step-4">
+        <h2 style="font-size:1.1rem;font-weight:700;margin-bottom:.5rem">Inviter votre enfant</h2>
+        <p class="text-sm text-muted mb-2">
+          Un compte temporaire a été créé pour votre enfant. Souhaitez-vous l'inviter à créer son propre compte NotesQC ?
+        </p>
+        <div style="display:flex;flex-direction:column;gap:.75rem;margin-bottom:1rem">
+          <button class="btn btn-primary btn-block" id="btn-invite-email">Envoyer une invitation par courriel</button>
+          <button class="btn btn-ghost btn-block" id="btn-skip-invite">Non merci, continuer</button>
+        </div>
+        <div id="invite-email-form" class="hidden">
+          <div class="form-group">
+            <label class="form-label" for="invite-email-input">Courriel de l'enfant</label>
+            <input type="email" id="invite-email-input" class="form-control" placeholder="enfant@exemple.com">
+          </div>
+          <button class="btn btn-primary btn-block" id="btn-send-invite">Envoyer l'invitation</button>
+        </div>
+      </div>
+
+      <!-- Étape finale : Succès (lien en attente) -->
+      <div class="step-section" id="step-pending">
+        <div class="alert alert-success">
+          Votre demande a été enregistrée. Vous serez automatiquement lié à votre enfant dès qu'il créera son compte NotesQC.
+        </div>
+        <p class="text-sm text-muted mb-2">Créez maintenant votre compte parent pour accéder à votre espace dès que le lien sera actif.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/parent-register.js"></script>
+  <script src="/js/theme.js"></script>
+  <script src="/js/cookie-banner.js"></script>
+</body>
+</html>
