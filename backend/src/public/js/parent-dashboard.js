@@ -57,7 +57,7 @@ async function loadChildren() {
   selector.innerHTML = childrenList.map(child => {
     const initials = (child.full_name || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
     const photo = child.photo_base64
-      ? `<img src="data:image/jpeg;base64,${child.photo_base64}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;" alt="">`
+      ? `<img src="data:image/jpeg;base64,${child.photo_base64}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;" alt="" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'avatar',textContent:'${initials}'}));">`
       : `<div class="avatar">${initials}</div>`;
     return `<button class="child-tab" data-child-id="${child.id}" data-child-name="${escapeAttr(child.full_name || child.permanent_code)}">
       ${photo}

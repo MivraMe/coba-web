@@ -7,6 +7,7 @@ const { requireParent } = require('../middleware/auth');
 const { encrypt } = require('../services/crypto');
 const { fetchNotes, fetchProfile, parseAssignment, getCanonicalSchoolYear } = require('../services/portalApi');
 const { processAssignments } = require('../services/dataSync');
+const { sendChildInvitationEmail } = require('../services/notifications/email');
 
 const router = express.Router();
 const SALT_ROUNDS = 12;
@@ -15,7 +16,7 @@ function signParentToken(parentId, email) {
   return jwt.sign({ id: parentId, email, role: 'parent' }, process.env.JWT_SECRET, { expiresIn: '7d' });
 }
 
-// ─── ROUTES PUBLIQUES ─────────────────────────────────────────────────────────
+// ─── ROUTES PUBLIQUES ─────────────────────────────────────────────
 
 // GET /api/parent/lookup-student?code=XXXX
 router.get('/lookup-student', async (req, res) => {
@@ -99,20 +100,30 @@ router.post('/create-child', async (req, res) => {
 });
 
 // POST /api/parent/register
+// Accepts either child_user_id (found/created child) OR permanent_code (pending — child not yet registered)
 router.post('/register', async (req, res) => {
-  const { first_name, last_name, email, password, phone, child_user_id } = req.body;
+  const { first_name, last_name, email, password, phone, child_user_id, permanent_code } = req.body;
   if (!first_name || !last_name || !email || !password) {
     return res.status(400).json({ error: 'Tous les champs obligatoires doivent être remplis' });
   }
   if (password.length < 8) return res.status(400).json({ error: 'Le mot de passe doit comporter au moins 8 caractères' });
-  if (!child_user_id) return res.status(400).json({ error: 'Enfant non spécifié' });
+  if (!child_user_id && !permanent_code) return res.status(400).json({ error: 'Enfant non spécifié' });
 
   try {
-    const childRes = await pool.query(
-      'SELECT id, full_name, permanent_code FROM users WHERE id = $1',
-      [child_user_id]
-    );
-    if (childRes.rows.length === 0) return res.status(404).json({ error: 'Enfant introuvable' });
+    let finalChildId = child_user_id || null;
+    let isPending = false;
+
+    if (!finalChildId && permanent_code) {
+      const existing = await pool.query(
+        'SELECT id FROM users WHERE permanent_code = $1 AND onboarding_completed = true',
+        [permanent_code.trim().toUpperCase()]
+      );
+      if (existing.rows.length > 0) {
+        finalChildId = existing.rows[0].id;
+      } else {
+        isPending = true;
+      }
+    }
 
     const hash = await bcrypt.hash(password, SALT_ROUNDS);
     const normalizedEmail = email.toLowerCase().trim();
@@ -120,23 +131,27 @@ router.post('/register', async (req, res) => {
     const parentRes = await pool.query(
       `INSERT INTO parents (first_name, last_name, email, password_hash, phone)
        VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, first_name, last_name, email, phone, created_at`,
+       RETURNING id, first_name, last_name, email, phone, notify_email, notify_sms, created_at`,
       [first_name.trim(), last_name.trim(), normalizedEmail, hash, phone || null]
     );
     const parent = parentRes.rows[0];
 
-    await pool.query(
-      `INSERT INTO parent_child_links (parent_id, child_user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-      [parent.id, child_user_id]
-    );
+    if (finalChildId) {
+      await pool.query(
+        `INSERT INTO parent_child_links (parent_id, child_user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+        [parent.id, finalChildId]
+      );
+    }
 
-    // Annuler le lien en attente si applicable
-    await pool.query(
-      `DELETE FROM parent_pending_links WHERE parent_id = $1 AND permanent_code = $2`,
-      [parent.id, childRes.rows[0].permanent_code]
-    ).catch(() => {});
+    if (isPending && permanent_code) {
+      await pool.query(
+        `INSERT INTO parent_pending_links (parent_id, permanent_code)
+         VALUES ($1, $2) ON CONFLICT (parent_id, permanent_code) DO NOTHING`,
+        [parent.id, permanent_code.trim().toUpperCase()]
+      );
+    }
 
-    res.status(201).json({ token: signParentToken(parent.id, parent.email), parent });
+    res.status(201).json({ token: signParentToken(parent.id, parent.email), parent, pending: isPending });
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'Ce courriel est déjà utilisé pour un compte parent' });
     console.error(err);
@@ -168,13 +183,13 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// ─── ROUTES AUTHENTIFIÉES ─────────────────────────────────────────────────────
+// ─── ROUTES AUTHENTIFIÉES ─────────────────────────────────────────────
 
 // GET /api/parent/me
 router.get('/me', requireParent, async (req, res) => {
   try {
     const { rows } = await pool.query(
-      'SELECT id, first_name, last_name, email, phone, created_at FROM parents WHERE id = $1',
+      'SELECT id, first_name, last_name, email, phone, notify_email, notify_sms, created_at FROM parents WHERE id = $1',
       [req.parent.id]
     );
     if (!rows[0]) return res.status(404).json({ error: 'Compte parent introuvable' });
@@ -262,7 +277,7 @@ router.post('/pending-link', requireParent, async (req, res) => {
   }
 });
 
-// ─── DONNÉES ENFANT ───────────────────────────────────────────────────────────
+// ─── DONNÉES ENFANT ───────────────────────────────────────────────────────────────
 
 async function checkAccess(parentId, childUserId) {
   const { rows } = await pool.query(
@@ -502,7 +517,7 @@ router.get('/children/:userId/cours/:groupId/graphique', requireParent, async (r
 
 // PUT /api/parent/account
 router.put('/account', requireParent, async (req, res) => {
-  const { first_name, last_name, email, phone } = req.body;
+  const { first_name, last_name, email, phone, notify_email, notify_sms } = req.body;
   try {
     const updates = [];
     const values = [];
@@ -512,12 +527,14 @@ router.put('/account', requireParent, async (req, res) => {
     if (last_name !== undefined) { updates.push(`last_name = $${idx++}`); values.push(last_name.trim()); }
     if (email !== undefined) { updates.push(`email = $${idx++}`); values.push(email.toLowerCase().trim()); }
     if (phone !== undefined) { updates.push(`phone = $${idx++}`); values.push(phone || null); }
+    if (notify_email !== undefined) { updates.push(`notify_email = $${idx++}`); values.push(Boolean(notify_email)); }
+    if (notify_sms !== undefined) { updates.push(`notify_sms = $${idx++}`); values.push(Boolean(notify_sms)); }
 
     if (updates.length === 0) return res.status(400).json({ error: 'Aucune modification' });
 
     values.push(req.parent.id);
     const { rows } = await pool.query(
-      `UPDATE parents SET ${updates.join(', ')} WHERE id = $${idx} RETURNING id, first_name, last_name, email, phone`,
+      `UPDATE parents SET ${updates.join(', ')} WHERE id = $${idx} RETURNING id, first_name, last_name, email, phone, notify_email, notify_sms`,
       values
     );
     res.json(rows[0]);
@@ -525,6 +542,34 @@ router.put('/account', requireParent, async (req, res) => {
     if (err.code === '23505') return res.status(409).json({ error: 'Ce courriel est déjà utilisé' });
     console.error(err);
     res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST /api/parent/invite-child — envoyer un courriel d'invitation à un enfant
+router.post('/invite-child', requireParent, async (req, res) => {
+  const { child_email } = req.body;
+  if (!child_email) return res.status(400).json({ error: 'Adresse courriel requise' });
+
+  try {
+    const { rows } = await pool.query(
+      'SELECT first_name, last_name FROM parents WHERE id = $1',
+      [req.parent.id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Compte parent introuvable' });
+
+    const parent = rows[0];
+    const base = (process.env.APP_URL || '').replace(/\/$/, '');
+    const registerUrl = base ? `${base}/register` : '/register';
+
+    await sendChildInvitationEmail(child_email, {
+      parentName: `${parent.first_name} ${parent.last_name}`,
+      registerUrl,
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erreur lors de l'envoi du courriel" });
   }
 });
 
