@@ -293,15 +293,28 @@ router.get('/users', async (req, res) => {
       JOIN groups g ON g.id = gm.group_id
     `);
 
+    const { rows: parentLinks } = await pool.query(`
+      SELECT pcl.child_user_id, p.id AS parent_id, p.first_name, p.last_name, p.email AS parent_email
+      FROM parent_child_links pcl
+      JOIN parents p ON p.id = pcl.parent_id
+    `);
+
     const groupsByUser = new Map();
     for (const m of memberships) {
       if (!groupsByUser.has(m.user_id)) groupsByUser.set(m.user_id, []);
       groupsByUser.get(m.user_id).push({ course_code: m.course_code, course_name: m.course_name, school_year: m.school_year });
     }
 
+    const parentsByUser = new Map();
+    for (const l of parentLinks) {
+      if (!parentsByUser.has(l.child_user_id)) parentsByUser.set(l.child_user_id, []);
+      parentsByUser.get(l.child_user_id).push({ id: l.parent_id, first_name: l.first_name, last_name: l.last_name, email: l.parent_email });
+    }
+
     res.json(users.map(u => ({
       ...u,
       groups: groupsByUser.get(u.id) || [],
+      linked_parents: parentsByUser.get(u.id) || [],
     })));
   } catch (err) {
     console.error(err);
@@ -504,6 +517,52 @@ router.patch('/users/:id', requireSuperAdmin, async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'Ce courriel est déjà utilisé' });
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ── PARENTS ────────────────────────────────────────────────────────────────────
+
+// GET /api/admin/parents
+router.get('/parents', async (req, res) => {
+  try {
+    const { rows: parents } = await pool.query(`
+      SELECT id, first_name, last_name, email, phone, notify_email, notify_sms, created_at
+      FROM parents
+      ORDER BY created_at ASC
+    `);
+
+    const { rows: links } = await pool.query(`
+      SELECT pcl.parent_id, u.id AS child_id, u.full_name, u.permanent_code, u.email AS child_email
+      FROM parent_child_links pcl
+      JOIN users u ON u.id = pcl.child_user_id
+    `);
+
+    const { rows: pending } = await pool.query(`
+      SELECT parent_id, permanent_code, created_at
+      FROM parent_pending_links
+      ORDER BY created_at ASC
+    `);
+
+    const childrenByParent = new Map();
+    for (const l of links) {
+      if (!childrenByParent.has(l.parent_id)) childrenByParent.set(l.parent_id, []);
+      childrenByParent.get(l.parent_id).push({ id: l.child_id, full_name: l.full_name, permanent_code: l.permanent_code, email: l.child_email });
+    }
+
+    const pendingByParent = new Map();
+    for (const p of pending) {
+      if (!pendingByParent.has(p.parent_id)) pendingByParent.set(p.parent_id, []);
+      pendingByParent.get(p.parent_id).push({ permanent_code: p.permanent_code, created_at: p.created_at });
+    }
+
+    res.json(parents.map(p => ({
+      ...p,
+      children: childrenByParent.get(p.id) || [],
+      pending_codes: pendingByParent.get(p.id) || [],
+    })));
+  } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Erreur serveur' });
   }

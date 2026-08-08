@@ -8,6 +8,7 @@ const { encrypt } = require('../services/crypto');
 const { fetchNotes, fetchProfile, parseAssignment, getCanonicalSchoolYear } = require('../services/portalApi');
 const { processAssignments } = require('../services/dataSync');
 const { sendChildInvitationEmail } = require('../services/notifications/email');
+const { sendSms } = require('../services/notifications/sms');
 
 const router = express.Router();
 const SALT_ROUNDS = 12;
@@ -546,10 +547,10 @@ router.put('/account', requireParent, async (req, res) => {
   }
 });
 
-// POST /api/parent/invite-child — envoyer un courriel d'invitation à un enfant
+// POST /api/parent/invite-child — envoyer une invitation à un enfant (courriel et/ou SMS)
 router.post('/invite-child', requireParent, async (req, res) => {
-  const { child_email } = req.body;
-  if (!child_email) return res.status(400).json({ error: 'Adresse courriel requise' });
+  const { child_email, phone } = req.body;
+  if (!child_email && !phone) return res.status(400).json({ error: 'Adresse courriel ou numéro de téléphone requis' });
 
   try {
     const { rows } = await pool.query(
@@ -561,16 +562,20 @@ router.post('/invite-child', requireParent, async (req, res) => {
     const parent = rows[0];
     const base = (process.env.APP_URL || '').replace(/\/$/, '');
     const registerUrl = base ? `${base}/register` : '/register';
+    const parentName = `${parent.first_name} ${parent.last_name}`;
 
-    await sendChildInvitationEmail(child_email, {
-      parentName: `${parent.first_name} ${parent.last_name}`,
-      registerUrl,
-    });
+    if (child_email) {
+      await sendChildInvitationEmail(child_email, { parentName, registerUrl });
+    }
+    if (phone) {
+      const msg = `${parentName} t'invite à rejoindre NotesQC pour suivre tes notes. Crée ton compte : ${registerUrl}`;
+      await sendSms(phone, msg);
+    }
 
     res.json({ ok: true });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Erreur lors de l\'envoi du courriel' });
+    res.status(500).json({ error: 'Erreur lors de l\'envoi de l\'invitation' });
   }
 });
 
