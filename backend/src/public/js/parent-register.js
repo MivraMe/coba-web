@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // ── Étape 1 : Recherche par code permanent ───────────────────────────────────
+  // ── Étape 1 : Recherche par code permanent ────────────────────────────────────────────
 
   document.getElementById('lookup-btn').addEventListener('click', async () => {
     const code = document.getElementById('perm-code').value.trim().toUpperCase();
@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.key === 'Enter') document.getElementById('lookup-btn').click();
   });
 
-  // ── Étape 1b : Options quand enfant non trouvé ───────────────────────────────
+  // ── Étape 1b : Options quand enfant non trouvé ───────────────────────────────────────────
 
   document.getElementById('btn-use-portal').addEventListener('click', () => setStep('2'));
 
@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // On garde pendingPermanentCode pour créer le pending_link après inscription
   });
 
-  // ── Étape 2 : Identifiants du portail ───────────────────────────────────────
+  // ── Étape 2 : Identifiants du portail ───────────────────────────────────────────────────
 
   document.getElementById('portal-verify-btn').addEventListener('click', async () => {
     const user = document.getElementById('portal-user').value.trim();
@@ -114,7 +114,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     e.preventDefault(); setStep('1b');
   });
 
-  // ── Étape 3 : Création du compte parent ─────────────────────────────────────
+  // ── Étape 3 : Création du compte parent ───────────────────────────────────────────────────
 
   function showChildCard(child) {
     const card = document.getElementById('child-confirm-card');
@@ -139,7 +139,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!first_name || !last_name || !email || !pass) { showAlert(alert, 'Veuillez remplir tous les champs obligatoires.'); return; }
     if (pass !== pass2) { showAlert(alert, 'Les mots de passe ne correspondent pas.'); return; }
     if (pass.length < 8) { showAlert(alert, 'Le mot de passe doit comporter au moins 8 caractères.'); return; }
-    if (!terms) { showAlert(alert, "Vous devez accepter les conditions d'utilisation."); return; }
+    if (!terms) { showAlert(alert, 'Vous devez accepter les conditions d\'utilisation.'); return; }
     if (!foundChild && !pendingPermanentCode) { showAlert(alert, 'Aucun enfant sélectionné.'); return; }
 
     const btn = document.getElementById('register-btn');
@@ -182,7 +182,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // ── Étape 4 : Invitation ─────────────────────────────────────────────────────
+  // ── Étape 4 : Invitation ──────────────────────────────────────────────────────────────────
 
   document.getElementById('btn-invite-email').addEventListener('click', () => {
     document.getElementById('invite-email-form').classList.remove('hidden');

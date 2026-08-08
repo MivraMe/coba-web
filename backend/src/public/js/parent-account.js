@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     nav.querySelectorAll('.nav-logout').forEach(el => el.addEventListener('click', () => PARENT.logout()));
   }
 
-  // ── Charger les infos du compte ───────────────────────────────────────────
+  // ── Charger les infos du compte ───────────────────────────────────────────────────────
 
   document.getElementById('first-name').value = parent.first_name || '';
   document.getElementById('last-name').value = parent.last_name || '';
@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('notif-email').checked = !!parent.notify_email;
   document.getElementById('notif-sms').checked = !!parent.notify_sms;
 
-  // ── Enregistrer le profil ─────────────────────────────────────────────────
+  // ── Enregistrer le profil ───────────────────────────────────────────────────────────────
 
   document.getElementById('save-profile-btn').addEventListener('click', async () => {
     const first_name = document.getElementById('first-name').value.trim();
@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     showAlert(alert, 'Profil mis à jour avec succès.', 'success');
   });
 
-  // ── Changer le mot de passe ───────────────────────────────────────────────
+  // ── Changer le mot de passe ───────────────────────────────────────────────────────────────
 
   document.getElementById('save-password-btn').addEventListener('click', async () => {
     const current = document.getElementById('current-pass').value;
@@ -74,7 +74,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     showAlert(alert, 'Mot de passe modifié avec succès.', 'success');
   });
 
-  // ── Notifications ────────────────────────────────────────────────────────────
+  // ── Notifications ──────────────────────────────────────────────────────────────────────
 
   document.getElementById('save-notif-btn').addEventListener('click', async () => {
     const notify_email = document.getElementById('notif-email').checked;
@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     showAlert(alert, 'Préférences de notifications enregistrées.', 'success');
   });
 
-  // ── Enfants ───────────────────────────────────────────────────────────────
+  // ── Enfants ──────────────────────────────────────────────────────────────────────
 
   await loadChildren();
 
@@ -123,7 +123,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!res) return;
 
     const data = await res.json();
-    if (!res.ok) { showAlert(alert, data.error || "Erreur lors de l'ajout"); return; }
+    if (!res.ok) { showAlert(alert, data.error || 'Erreur lors de l\'ajout'); return; }
 
     document.getElementById('add-code').value = '';
     document.getElementById('add-child-form').classList.remove('open');

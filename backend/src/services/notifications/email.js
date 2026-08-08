@@ -13,6 +13,10 @@ function appUrl() {
 function emailWrapper(bodyHtml) {
   const base = appUrl();
 
+  // External URL is the only reliable approach across all email clients
+  // (Gmail strips CID inline images and data URIs).
+  // When APP_URL is not set, fall back to a table-based blue header
+  // (bgcolor works everywhere; CSS background on <div> is often stripped).
   const bannerHtml = base
     ? `<a href="${base}" style="display:block;text-decoration:none;line-height:0">
         <img src="${base}/logo/banner_whitetxt_blueback.png" alt="NotesQC" width="600"
@@ -65,6 +69,7 @@ function ctaButton(text, url) {
   </table>`;
 }
 
+// Table-based progress bar — bgcolor works in all email clients.
 function gradeBar(percentage) {
   const pct = Math.min(100, Math.max(0, Math.round(percentage)));
   const filledColor = pct >= 75 ? '#16a34a' : pct >= 60 ? '#d97706' : '#dc2626';
@@ -148,7 +153,7 @@ async function sendNewGradeEmail(to, subject, { courseCode, courseName, assignme
 async function sendInvitationEmail(to, { inviterEmail, inviteUrl, expiresAt }) {
   const client = getClient();
   if (!client) {
-    console.warn("RESEND_API_KEY non configuré, courriel d'invitation non envoyé");
+    console.warn('RESEND_API_KEY non configuré, courriel d\'invitation non envoyé');
     return;
   }
 
@@ -243,7 +248,7 @@ async function sendPasswordResetEmail(to, code) {
 async function sendChildInvitationEmail(to, { parentName, registerUrl }) {
   const client = getClient();
   if (!client) {
-    console.warn("RESEND_API_KEY non configuré, courriel d'invitation enfant non envoyé");
+    console.warn('RESEND_API_KEY non configuré, courriel d\'invitation enfant non envoyé');
     return;
   }
 
