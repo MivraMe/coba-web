@@ -17,6 +17,8 @@ async function syncUserData(userId) {
 async function processAssignments(userId, rawAssignments) {
   const parsed = rawAssignments.map(parseAssignment);
 
+  // Group by course_code only; school_year is determined at the course level
+  // to avoid aberrant per-assignment dates creating duplicate groups.
   const coursesMap = new Map();
   for (const a of parsed) {
     if (!coursesMap.has(a.course_code)) {

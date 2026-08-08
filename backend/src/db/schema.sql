@@ -201,4 +201,3 @@ CREATE TABLE IF NOT EXISTS todo_items (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CONSTRAINT todo_items_title_key UNIQUE (title)
 );
-

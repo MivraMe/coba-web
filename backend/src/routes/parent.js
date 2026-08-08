@@ -16,7 +16,7 @@ function signParentToken(parentId, email) {
   return jwt.sign({ id: parentId, email, role: 'parent' }, process.env.JWT_SECRET, { expiresIn: '7d' });
 }
 
-// ─── ROUTES PUBLIQUES ─────────────────────────────────────────────
+// ─── ROUTES PUBLIQUES ─────────────────────────────────────────────────────────
 
 // GET /api/parent/lookup-student?code=XXXX
 router.get('/lookup-student', async (req, res) => {
@@ -114,6 +114,7 @@ router.post('/register', async (req, res) => {
     let isPending = false;
 
     if (!finalChildId && permanent_code) {
+      // Chercher si l'enfant existe déjà avec ce code permanent
       const existing = await pool.query(
         'SELECT id FROM users WHERE permanent_code = $1 AND onboarding_completed = true',
         [permanent_code.trim().toUpperCase()]
@@ -183,7 +184,7 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// ─── ROUTES AUTHENTIFIÉES ─────────────────────────────────────────────
+// ─── ROUTES AUTHENTIFIÉES ─────────────────────────────────────────────────────
 
 // GET /api/parent/me
 router.get('/me', requireParent, async (req, res) => {
@@ -277,7 +278,7 @@ router.post('/pending-link', requireParent, async (req, res) => {
   }
 });
 
-// ─── DONNÉES ENFANT ───────────────────────────────────────────────────────────────
+// ─── DONNÉES ENFANT ───────────────────────────────────────────────────────────
 
 async function checkAccess(parentId, childUserId) {
   const { rows } = await pool.query(
@@ -569,7 +570,7 @@ router.post('/invite-child', requireParent, async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Erreur lors de l'envoi du courriel" });
+    res.status(500).json({ error: 'Erreur lors de l\'envoi du courriel' });
   }
 });
 
