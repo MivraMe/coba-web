@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     nav.querySelectorAll('.nav-logout').forEach(el => el.addEventListener('click', () => PARENT.logout()));
   }
 
-  // ── Charger les infos du compte ───────────────────────────────────────────────────────
+  // ── Charger les infos du compte ───────────────────────────────────────
 
   document.getElementById('first-name').value = parent.first_name || '';
   document.getElementById('last-name').value = parent.last_name || '';
@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('notif-email').checked = !!parent.notify_email;
   document.getElementById('notif-sms').checked = !!parent.notify_sms;
 
-  // ── Enregistrer le profil ───────────────────────────────────────────────────────────────
+  // ── Enregistrer le profil ─────────────────────────────────────────
 
   document.getElementById('save-profile-btn').addEventListener('click', async () => {
     const first_name = document.getElementById('first-name').value.trim();
@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     showAlert(alert, 'Profil mis à jour avec succès.', 'success');
   });
 
-  // ── Changer le mot de passe ───────────────────────────────────────────────────────────────
+  // ── Changer le mot de passe ───────────────────────────────────────
 
   document.getElementById('save-password-btn').addEventListener('click', async () => {
     const current = document.getElementById('current-pass').value;
@@ -74,7 +74,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     showAlert(alert, 'Mot de passe modifié avec succès.', 'success');
   });
 
-  // ── Notifications ──────────────────────────────────────────────────────────────────────
+  // ── Notifications ──────────────────────────────────────────────────────
 
   document.getElementById('save-notif-btn').addEventListener('click', async () => {
     const notify_email = document.getElementById('notif-email').checked;
@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     showAlert(alert, 'Préférences de notifications enregistrées.', 'success');
   });
 
-  // ── Enfants ──────────────────────────────────────────────────────────────────────
+  // ── Enfants ────────────────────────────────────────────────────────────────
 
   await loadChildren();
 
@@ -123,12 +123,54 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!res) return;
 
     const data = await res.json();
-    if (!res.ok) { showAlert(alert, data.error || 'Erreur lors de l\'ajout'); return; }
+
+    if (!res.ok) {
+      if (res.status === 404) {
+        // Enfant non trouvé : créer un lien d'attente et proposer une invitation
+        await PARENT.request('POST', '/parent/pending-link', { permanent_code: code });
+        document.getElementById('invite-section').classList.remove('hidden');
+        showAlert(alert, 'Code non trouvé. Un lien d\'attente a été créé. Invitez votre enfant à s\'inscrire.', 'info');
+      } else {
+        showAlert(alert, data.error || 'Erreur lors de l\'ajout');
+      }
+      return;
+    }
 
     document.getElementById('add-code').value = '';
     document.getElementById('add-child-form').classList.remove('open');
+    document.getElementById('invite-section').classList.add('hidden');
     showAlert(alert, `${data.child.full_name || data.child.permanent_code} a été ajouté.`, 'success');
     await loadChildren();
+  });
+
+  // Invitation par courriel
+  document.getElementById('invite-email-btn').addEventListener('click', async () => {
+    const email = document.getElementById('invite-email').value.trim();
+    if (!email) { showAlert(alert, 'Entrez un courriel.'); return; }
+    const btn = document.getElementById('invite-email-btn');
+    setLoading(btn, true, 'Envoi…');
+    const res = await PARENT.request('POST', '/parent/invite-child', { child_email: email });
+    setLoading(btn, false, 'Envoyer');
+    if (!res) return;
+    const data = await res.json();
+    if (!res.ok) { showAlert(alert, data.error || 'Erreur lors de l\'envoi'); return; }
+    document.getElementById('invite-email').value = '';
+    showAlert(alert, 'Invitation envoyée par courriel.', 'success');
+  });
+
+  // Invitation par SMS
+  document.getElementById('invite-sms-btn').addEventListener('click', async () => {
+    const phone = document.getElementById('invite-phone').value.trim();
+    if (!phone) { showAlert(alert, 'Entrez un numéro de téléphone.'); return; }
+    const btn = document.getElementById('invite-sms-btn');
+    setLoading(btn, true, 'Envoi…');
+    const res = await PARENT.request('POST', '/parent/invite-child', { phone });
+    setLoading(btn, false, 'Envoyer SMS');
+    if (!res) return;
+    const data = await res.json();
+    if (!res.ok) { showAlert(alert, data.error || 'Erreur lors de l\'envoi'); return; }
+    document.getElementById('invite-phone').value = '';
+    showAlert(alert, 'Invitation envoyée par SMS.', 'success');
   });
 });
 
@@ -157,7 +199,7 @@ async function loadChildren() {
         <div class="child-name">${escapeHtml(name)}</div>
         <div class="child-code">Code permanent : ${escapeHtml(child.permanent_code || '—')}</div>
       </div>
-      <button class="btn btn-danger btn-sm" onclick="removeChild(${child.id}, '${escapeAttr(name)}')">Retirer</button>
+      <button class="btn btn-danger btn-sm" onclick="removeChild(${child.id}, ${JSON.stringify(name)})">Retirer</button>
     </div>`;
   }).join('');
 }
