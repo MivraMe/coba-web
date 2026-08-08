@@ -507,11 +507,15 @@ let _usersCache = [];
 
 async function loadUsers() {
   const tbody = document.getElementById('users-tbody');
-  tbody.innerHTML = '<tr><td colspan="7" style="color:var(--text-3);text-align:center">Chargement…</td></tr>';
-  const users = await API.get('/admin/users');
+  tbody.innerHTML = '<tr><td colspan="9" style="color:var(--text-3);text-align:center">Chargement…</td></tr>';
+  const [users, parents] = await Promise.all([
+    API.get('/admin/users'),
+    API.get('/admin/parents'),
+  ]);
   if (!users) return;
   _usersCache = users;
   renderUsersTable(users);
+  if (parents) renderParentsTable(parents);
 }
 
 let _isSuperAdminView = false;
@@ -519,7 +523,7 @@ let _isSuperAdminView = false;
 function renderUsersTable(users) {
   const tbody = document.getElementById('users-tbody');
   if (users.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" style="color:var(--text-3);text-align:center">Aucun utilisateur.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" style="color:var(--text-3);text-align:center">Aucun utilisateur.</td></tr>';
     return;
   }
   tbody.innerHTML = users.map(u => {
@@ -577,6 +581,14 @@ function renderUsersTable(users) {
     const avatarHtml = u.photo_base64
       ? `<img src="data:image/jpeg;base64,${u.photo_base64}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;flex-shrink:0;display:block" alt="">`
       : `<div style="width:34px;height:34px;border-radius:50%;background:${avatarBg};color:#fff;font-size:.72rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;user-select:none">${escapeHtml(initials)}</div>`;
+    const permCode = u.permanent_code
+      ? `<code style="font-size:.78rem;background:var(--bg-2);padding:.1rem .3rem;border-radius:3px">${escapeHtml(u.permanent_code)}</code>`
+      : '<span style="color:var(--text-3)">—</span>';
+
+    const linkedParents = u.linked_parents && u.linked_parents.length > 0
+      ? u.linked_parents.map(p => `<div style="font-size:.78rem">${escapeHtml(`${p.first_name} ${p.last_name}`)}<br><span style="color:var(--text-3)">${escapeHtml(p.email)}</span></div>`).join('')
+      : '<span style="color:var(--text-3)">—</span>';
+
     return `<tr>
       <td>
         <div style="display:flex;align-items:center;gap:.6rem">
@@ -588,6 +600,8 @@ function renderUsersTable(users) {
           </div>
         </div>
       </td>
+      <td style="font-size:.8rem">${permCode}</td>
+      <td style="font-size:.8rem">${linkedParents}</td>
       <td style="font-size:.8rem;white-space:nowrap">${created}</td>
       <td style="font-size:.8rem">${synced}</td>
       <td style="font-size:.8rem">${groups}</td>
@@ -596,6 +610,54 @@ function renderUsersTable(users) {
       <td style="display:flex;gap:.35rem;flex-wrap:wrap">
         ${actionsHtml}
       </td>
+    </tr>`;
+  }).join('');
+}
+
+function renderParentsTable(parents) {
+  const tbody = document.getElementById('parents-tbody');
+  if (!tbody) return;
+  if (parents.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="color:var(--text-3);text-align:center">Aucun compte parent.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = parents.map(p => {
+    const created = new Date(p.created_at).toLocaleDateString('fr-CA');
+    const notif = [
+      p.notify_email ? '✉️' : '<span style="color:var(--text-3)">✉</span>',
+      p.notify_sms ? '📱' : '<span style="color:var(--text-3)">📵</span>',
+    ].join(' ');
+
+    const childrenHtml = p.children.length > 0
+      ? p.children.map(c => `<div style="font-size:.78rem">
+          ${c.full_name ? escapeHtml(c.full_name) : ''}
+          ${c.permanent_code ? `<code style="font-size:.75rem;background:var(--bg-2);padding:.1rem .3rem;border-radius:3px;margin-left:.25rem">${escapeHtml(c.permanent_code)}</code>` : ''}
+          <br><span style="color:var(--text-3)">${escapeHtml(c.email)}</span>
+        </div>`).join('')
+      : '<span style="color:var(--text-3)">—</span>';
+
+    const pendingHtml = p.pending_codes.length > 0
+      ? p.pending_codes.map(pc => `<code style="font-size:.75rem;background:var(--bg-2);padding:.1rem .3rem;border-radius:3px">${escapeHtml(pc.permanent_code)}</code>`).join(' ')
+      : '<span style="color:var(--text-3)">—</span>';
+
+    const initials = `${p.first_name[0]}${p.last_name[0]}`.toUpperCase();
+    const avatarBg = avatarColor(p.email);
+
+    return `<tr>
+      <td>
+        <div style="display:flex;align-items:center;gap:.6rem">
+          <div style="width:34px;height:34px;border-radius:50%;background:${avatarBg};color:#fff;font-size:.72rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;user-select:none">${escapeHtml(initials)}</div>
+          <div style="min-width:0">
+            <div style="font-weight:600;font-size:.85rem;line-height:1.2">${escapeHtml(`${p.first_name} ${p.last_name}`)}</div>
+            <div style="font-size:.78rem;color:var(--text-3)">${escapeHtml(p.email)}</div>
+            ${p.phone ? `<div style="font-size:.72rem;color:var(--text-3)">${escapeHtml(p.phone)}</div>` : ''}
+          </div>
+        </div>
+      </td>
+      <td style="font-size:.8rem">${childrenHtml}</td>
+      <td style="font-size:.8rem">${pendingHtml}</td>
+      <td style="font-size:.85rem">${notif}</td>
+      <td style="font-size:.8rem;white-space:nowrap">${created}</td>
     </tr>`;
   }).join('');
 }

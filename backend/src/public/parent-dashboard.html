@@ -3,56 +3,68 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tableau de bord parent · NotesQC</title>
+  <title>Tableau de bord — Espace parent · NotesQC</title>
   <link rel="stylesheet" href="/css/style.css">
   <script>(function(){var t=localStorage.getItem('coba_theme');if(t==='dark')document.documentElement.classList.add('dark');})()</script>
   <style>
-    .parent-badge {
-      display: inline-flex; align-items: center; gap: .4rem;
-      padding: .35rem .75rem; border-radius: 999px;
-      background: #dbeafe; color: #1e40af;
-      font-size: .8rem; font-weight: 600;
-      margin-bottom: 1.25rem;
-    }
-    html.dark .parent-badge { background: #1e3a5f; color: #93c5fd; }
-
-    .child-selector {
-      display: flex; flex-wrap: wrap; gap: .5rem;
+    .global-header {
+      background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      color: #fff;
       margin-bottom: 1.5rem;
     }
-    .child-btn {
+    .global-header h2 { font-size: 1rem; font-weight: 600; opacity: .8; margin-bottom: 1rem; }
+    .global-stats-row { display: flex; gap: 2rem; flex-wrap: wrap; }
+    .global-stat-label { font-size: .75rem; opacity: .7; text-transform: uppercase; letter-spacing: .05em; }
+    .global-stat-value { font-size: 1.9rem; font-weight: 800; line-height: 1.1; }
+    .global-stat-sub { font-size: .8rem; opacity: .7; margin-top: .1rem; }
+    .divider-v { width: 1px; background: rgba(255,255,255,.25); align-self: stretch; }
+    .global-expand-btn {
+      background: rgba(255,255,255,.15); border: none; color: #fff;
+      padding: .35rem .75rem; border-radius: var(--radius-sm);
+      cursor: pointer; font-size: .85rem; margin-top: 1rem;
+      transition: background .15s;
+    }
+    .global-expand-btn:hover { background: rgba(255,255,255,.25); }
+    .global-expanded { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid rgba(255,255,255,.2); }
+    .global-chart-wrap { position: relative; height: 220px; }
+    .toggle-bar { display: inline-flex; border: 1.5px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+    .toggle-btn { padding: .35rem .85rem; font-size: .875rem; background: var(--surface); border: none; cursor: pointer; color: var(--text-2); transition: background .15s, color .15s; }
+    .toggle-btn.active { background: var(--primary); color: #fff; }
+    .child-selector {
+      display: flex; align-items: center; gap: .75rem;
+      margin-bottom: 1.25rem; flex-wrap: wrap;
+    }
+    .child-tab {
       display: flex; align-items: center; gap: .5rem;
-      padding: .45rem .875rem; border-radius: 999px;
-      border: 1.5px solid var(--border); background: var(--surface);
-      cursor: pointer; font-size: .875rem; font-weight: 500;
-      color: var(--text-1); transition: border-color .15s;
+      padding: .5rem 1rem; border-radius: var(--radius);
+      border: 1.5px solid var(--border); cursor: pointer;
+      background: var(--surface); font-size: .9rem;
+      transition: all .15s; color: var(--text);
     }
-    .child-btn:hover { border-color: var(--primary); }
-    .child-btn.active {
-      border-color: var(--primary); background: var(--primary-l);
-      color: var(--primary);
-    }
-    .child-btn img, .child-btn .c-avatar {
-      width: 26px; height: 26px; border-radius: 50%;
-      object-fit: cover; flex-shrink: 0;
-    }
-    .child-btn .c-avatar {
+    .child-tab.active { border-color: #7c3aed; background: color-mix(in srgb,#7c3aed 10%,var(--surface)); color: #7c3aed; font-weight: 600; }
+    .child-tab .avatar {
+      width: 28px; height: 28px; border-radius: 50%;
       background: #7c3aed; color: #fff;
       display: flex; align-items: center; justify-content: center;
-      font-size: .7rem; font-weight: 700;
+      font-size: .75rem; font-weight: 700;
     }
-
-    .no-children {
-      text-align: center; padding: 3rem 1rem;
+    .parent-badge {
+      display: inline-flex; align-items: center; gap: .3rem;
+      background: color-mix(in srgb,#7c3aed 12%,var(--surface));
+      color: #7c3aed; border-radius: var(--radius-sm);
+      padding: .2rem .6rem; font-size: .78rem; font-weight: 600; margin-bottom: .75rem;
     }
-    .no-children .icon { font-size: 2.5rem; margin-bottom: .75rem; }
-
     .readonly-notice {
-      padding: .6rem 1rem; border-radius: 6px;
-      background: var(--bg-2); border: 1px solid var(--border);
-      font-size: .85rem; color: var(--text-2);
-      margin-bottom: 1.25rem;
+      background: color-mix(in srgb,#f59e0b 10%,var(--surface));
+      border-left: 3px solid #f59e0b; border-radius: var(--radius-sm);
+      padding: .5rem .875rem; font-size: .8rem; color: var(--text-2); margin-bottom: 1rem;
     }
+    .no-children {
+      text-align: center; padding: 3rem 1rem; color: var(--text-2);
+    }
+    .no-children .icon { font-size: 3rem; margin-bottom: 1rem; }
   </style>
 </head>
 <body>
@@ -60,8 +72,12 @@
     <a class="nav-brand" href="/parent-dashboard">
       <img src="/logo/notesQC_white.png" alt="NotesQC" class="nav-logo">
     </a>
+    <div class="nav-links" id="navLinks">
+      <a href="/parent-dashboard" class="nav-link active">Tableau de bord</a>
+      <a href="/parent-account" class="nav-link">Mon compte</a>
+    </div>
     <div class="nav-right">
-      <span class="nav-email" id="nav-parent-name"></span>
+      <span class="nav-email" id="navEmail"></span>
       <button class="theme-btn" id="themeBtnNav" title="Basculer le thème" aria-label="Basculer le thème"><span data-theme-icon></span></button>
       <button class="nav-logout" id="navLogout">Déconnexion</button>
     </div>
@@ -106,26 +122,61 @@
           <button class="global-expand-btn" id="global-expand-btn">▼ Afficher plus</button>
           <div class="global-expanded hidden" id="global-expanded">
             <div class="global-chart-wrap">
-              <canvas id="global-chart" height="90"></canvas>
+              <canvas id="global-chart"></canvas>
+            </div>
+            <div style="position:relative;height:200px;margin-top:1.25rem">
+              <canvas id="global-line-chart"></canvas>
             </div>
           </div>
         </div>
 
-        <!-- Filtres année -->
-        <div id="year-filter-wrap" style="display:flex;gap:.35rem;flex-wrap:wrap;margin-bottom:1rem"></div>
-
-        <!-- Cartes cours -->
-        <div id="courses-grid" class="courses-grid">
-          <div style="opacity:.6;font-size:.9rem">Chargement…</div>
+        <!-- Filtre d'année -->
+        <div class="year-filter" id="year-filter">
+          <div class="loading-overlay"><span class="spinner spinner-dark"></span></div>
         </div>
 
-        <!-- Détail cours -->
-        <div id="course-detail" class="course-detail hidden">
-          <button class="btn btn-ghost btn-sm" id="back-btn" style="margin-bottom:.75rem">← Retour</button>
-          <div id="detail-header" class="detail-header"></div>
-          <canvas id="detail-chart" height="120" style="margin:1rem 0"></canvas>
-          <div id="detail-controls" style="display:flex;gap:.35rem;flex-wrap:wrap;margin-bottom:.75rem"></div>
-          <div id="assignments-list"></div>
+        <!-- Grille de cours -->
+        <div class="courses-grid" id="courses-grid">
+          <div class="loading-overlay"><span class="spinner spinner-dark"></span></div>
+        </div>
+
+        <!-- Panneau détail -->
+        <div class="detail-panel hidden" id="detail-panel">
+          <div class="detail-header">
+            <div>
+              <div class="course-code" id="detail-code"></div>
+              <div class="detail-title" id="detail-name"></div>
+            </div>
+            <div class="toggle-bar">
+              <button class="toggle-btn active" id="toggle-avg">Moyenne</button>
+              <button class="toggle-btn" id="toggle-med">Médiane</button>
+            </div>
+            <button class="btn btn-ghost btn-sm" id="detail-close">✕ Fermer</button>
+          </div>
+
+          <div class="stats-grid" id="detail-stats"></div>
+
+          <div class="chart-container">
+            <canvas id="grade-chart"></canvas>
+          </div>
+
+          <h3 style="font-size:.95rem;font-weight:600;margin-bottom:.75rem">Détail des évaluations</h3>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Évaluation</th>
+                  <th>Catégorie</th>
+                  <th>Pond.</th>
+                  <th>Date</th>
+                  <th>Note</th>
+                  <th>Moy. groupe</th>
+                  <th>Méd. groupe</th>
+                </tr>
+              </thead>
+              <tbody id="assignments-table"></tbody>
+            </table>
+          </div>
         </div>
 
       </div>
@@ -143,7 +194,7 @@
     </a>
   </nav>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="/js/api.js"></script>
   <script src="/js/parent-dashboard.js"></script>
   <script src="/js/theme.js"></script>
