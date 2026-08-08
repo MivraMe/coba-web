@@ -186,6 +186,10 @@ CREATE INDEX IF NOT EXISTS idx_parent_child_links_parent ON parent_child_links(p
 CREATE INDEX IF NOT EXISTS idx_parent_child_links_child ON parent_child_links(child_user_id);
 CREATE INDEX IF NOT EXISTS idx_parent_pending_links_code ON parent_pending_links(permanent_code);
 
+-- Préférences de notifications parents
+ALTER TABLE parents ADD COLUMN IF NOT EXISTS notify_email BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE parents ADD COLUMN IF NOT EXISTS notify_sms BOOLEAN NOT NULL DEFAULT false;
+
 -- TODO items
 CREATE TABLE IF NOT EXISTS todo_items (
   id SERIAL PRIMARY KEY,

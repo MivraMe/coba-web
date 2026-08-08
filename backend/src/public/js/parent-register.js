@@ -139,7 +139,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!first_name || !last_name || !email || !pass) { showAlert(alert, 'Veuillez remplir tous les champs obligatoires.'); return; }
     if (pass !== pass2) { showAlert(alert, 'Les mots de passe ne correspondent pas.'); return; }
     if (pass.length < 8) { showAlert(alert, 'Le mot de passe doit comporter au moins 8 caractères.'); return; }
-    if (!terms) { showAlert(alert, 'Vous devez accepter les conditions d\'utilisation.'); return; }
+    if (!terms) { showAlert(alert, "Vous devez accepter les conditions d'utilisation."); return; }
     if (!foundChild && !pendingPermanentCode) { showAlert(alert, 'Aucun enfant sélectionné.'); return; }
 
     const btn = document.getElementById('register-btn');
@@ -149,24 +149,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (foundChild) {
       payload.child_user_id = foundChild.id;
-    } else {
-      // Cas "attente d'inscription" : on ne peut pas encore créer le lien
-      // On enregistre d'abord le parent sans enfant, puis on crée le lien en attente
-      // Workaround: on crée un "null" child... en fait le spec dit qu'on doit avoir un enfant.
-      // Dans le cas "btn-wait-child", on met le permanent_code dans pendingPermanentCode
-      // et on va créer le parent sans child_user_id, puis poster /pending-link
-      payload.child_user_id = null;
-    }
-
-    // Si pas de child_user_id valide, on doit d'abord créer le parent différemment
-    // Pour le cas "attente", l'API exige child_user_id - il faut un flow alternatif
-    // Ici, on saute la validation child_user_id côté serveur pour le cas pending
-    if (!foundChild) {
-      // Créer parent sans enfant d'abord (utiliser un endpoint différent ou skip)
-      // Pour l'instant, informer l'utilisateur d'utiliser le portail ou d'attendre
-      setLoading(btn, false, 'Créer mon compte');
-      showAlert(alert, 'Veuillez soit utiliser les identifiants du portail, soit demander à votre enfant de s\'inscrire et réessayer ensuite.');
-      return;
+    } else if (pendingPermanentCode) {
+      payload.permanent_code = pendingPermanentCode;
     }
 
     const res = await fetch('/api/parent/register', {
@@ -189,6 +173,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (childCreated) {
       setStep('4');
+    } else if (data.pending) {
+      const el = document.getElementById('pending-code-display');
+      if (el) el.textContent = pendingPermanentCode ? `(${pendingPermanentCode})` : '';
+      setStep('pending');
     } else {
       window.location.href = '/parent-dashboard';
     }
@@ -211,11 +199,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btn = document.getElementById('btn-send-invite');
     setLoading(btn, true, 'Envoi…');
 
-    // Utiliser le système d'invitation existant
-    const headers = { 'Content-Type': 'application/json' };
-    // Les invitations étudiantes nécessitent un token étudiant — on ne peut pas l'utiliser ici.
-    // On redirige directement.
-    setLoading(btn, false, 'Envoyer l\'invitation');
+    const res = await PARENT.request('POST', '/parent/invite-child', { child_email: email });
+    setLoading(btn, false, "Envoyer l'invitation");
+    if (!res) return;
+
     showAlert(alert, 'Invitation envoyée ! Votre enfant peut maintenant créer son compte.', 'success');
     setTimeout(() => { window.location.href = '/parent-dashboard'; }, 2000);
   });

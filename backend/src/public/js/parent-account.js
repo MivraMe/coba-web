@@ -18,6 +18,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('last-name').value = parent.last_name || '';
   document.getElementById('parent-email').value = parent.email || '';
   document.getElementById('parent-phone').value = parent.phone || '';
+  document.getElementById('notif-email').checked = !!parent.notify_email;
+  document.getElementById('notif-sms').checked = !!parent.notify_sms;
 
   // ── Enregistrer le profil ─────────────────────────────────────────────────
 
@@ -72,6 +74,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     showAlert(alert, 'Mot de passe modifié avec succès.', 'success');
   });
 
+  // ── Notifications ────────────────────────────────────────────────────────────
+
+  document.getElementById('save-notif-btn').addEventListener('click', async () => {
+    const notify_email = document.getElementById('notif-email').checked;
+    const notify_sms = document.getElementById('notif-sms').checked;
+
+    if (notify_sms && !document.getElementById('parent-phone').value.trim()) {
+      showAlert(alert, 'Ajoutez un numéro de téléphone pour activer les SMS.'); return;
+    }
+
+    const btn = document.getElementById('save-notif-btn');
+    setLoading(btn, true, 'Enregistrement…');
+    hideAlert(alert);
+
+    const res = await PARENT.request('PUT', '/parent/account', { notify_email, notify_sms });
+    setLoading(btn, false, 'Enregistrer les préférences');
+    if (!res) return;
+
+    const data = await res.json();
+    if (!res.ok) { showAlert(alert, data.error || 'Erreur lors de la sauvegarde'); return; }
+
+    PARENT.setParent({ ...PARENT.getParent(), notify_email: data.notify_email, notify_sms: data.notify_sms });
+    showAlert(alert, 'Préférences de notifications enregistrées.', 'success');
+  });
+
   // ── Enfants ───────────────────────────────────────────────────────────────
 
   await loadChildren();
@@ -96,7 +123,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!res) return;
 
     const data = await res.json();
-    if (!res.ok) { showAlert(alert, data.error || 'Erreur lors de l\'ajout'); return; }
+    if (!res.ok) { showAlert(alert, data.error || "Erreur lors de l'ajout"); return; }
 
     document.getElementById('add-code').value = '';
     document.getElementById('add-child-form').classList.remove('open');
@@ -121,7 +148,7 @@ async function loadChildren() {
     const name = child.full_name || child.permanent_code || '?';
     const initials = name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
     const photo = child.photo_base64
-      ? `<img src="data:image/jpeg;base64,${child.photo_base64}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;" alt="">`
+      ? `<img src="data:image/jpeg;base64,${child.photo_base64}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;" alt="" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'avatar',textContent:'${initials}'}));">`
       : `<div class="avatar">${initials}</div>`;
 
     return `<div class="child-row">
