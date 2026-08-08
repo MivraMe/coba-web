@@ -19,10 +19,10 @@
       display: flex; align-items: center; justify-content: center;
       font-size:.9rem; font-weight: 700; flex-shrink: 0;
     }
-    .child-row .child-info { flex: 1; }
-    .child-row .child-name { font-weight: 600; }
-    .child-row .child-code { font-size: .8rem; color: var(--text-2); }
-    .add-child-form { display: none; margin-top: .75rem; }
+    .child-info { flex: 1; min-width: 0; }
+    .child-name { font-weight: 600; font-size: .9rem; }
+    .child-code { font-size: .78rem; color: var(--text-3); margin-top: .1rem; }
+    .add-child-form { display: none; margin-bottom: 1rem; }
     .add-child-form.open { display: block; }
   </style>
 </head>
@@ -31,53 +31,46 @@
     <a class="nav-brand" href="/parent-dashboard">
       <img src="/logo/notesQC_white.png" alt="NotesQC" class="nav-logo">
     </a>
-    <div class="nav-links" id="navLinks">
-      <a href="/parent-dashboard" class="nav-link">Tableau de bord</a>
-      <a href="/parent-account" class="nav-link active">Mon compte</a>
-    </div>
     <div class="nav-right">
-      <span class="nav-email" id="navEmail"></span>
-      <button class="theme-btn" id="themeBtnNav" title="Basculer le thème"><span data-theme-icon></span></button>
-      <button class="nav-logout" id="navLogout">Déconnexion</button>
+      <span class="nav-email"></span>
+      <button class="theme-btn" id="themeBtnNav" title="Basculer le thème" aria-label="Basculer le thème"><span data-theme-icon></span></button>
+      <button class="nav-logout">Déconnexion</button>
     </div>
   </nav>
 
   <div class="page">
-    <div class="container" style="max-width:700px">
+    <div class="container">
 
-      <h1 class="page-title">Mon compte parent</h1>
-
+      <h1 style="font-size:1.3rem;font-weight:700;margin-bottom:1.5rem">Mon compte parent</h1>
       <div id="alert" class="alert alert-hidden" style="margin-bottom:1rem"></div>
 
-      <!-- Informations personnelles -->
+      <!-- Profil -->
       <div class="card mb-3">
         <div class="card-header"><h2 class="card-title">Informations personnelles</h2></div>
         <div class="card-body">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
-            <div class="form-group">
-              <label class="form-label" for="first-name">Prénom</label>
-              <input type="text" id="first-name" class="form-control" autocomplete="given-name">
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="last-name">Nom</label>
-              <input type="text" id="last-name" class="form-control" autocomplete="family-name">
-            </div>
+          <div class="form-group">
+            <label class="form-label" for="first-name">Prénom</label>
+            <input type="text" id="first-name" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="last-name">Nom</label>
+            <input type="text" id="last-name" class="form-control">
           </div>
           <div class="form-group">
             <label class="form-label" for="parent-email">Courriel</label>
-            <input type="email" id="parent-email" class="form-control" autocomplete="email">
+            <input type="email" id="parent-email" class="form-control">
           </div>
           <div class="form-group">
-            <label class="form-label" for="parent-phone">Téléphone (optionnel)</label>
-            <input type="tel" id="parent-phone" class="form-control" autocomplete="tel">
+            <label class="form-label" for="parent-phone">Téléphone <span class="text-muted" style="font-size:.8rem">(optionnel)</span></label>
+            <input type="tel" id="parent-phone" class="form-control" placeholder="+15141234567">
           </div>
           <button class="btn btn-primary" id="save-profile-btn">Enregistrer les modifications</button>
         </div>
       </div>
 
-      <!-- Changer le mot de passe -->
+      <!-- Mot de passe -->
       <div class="card mb-3">
-        <div class="card-header"><h2 class="card-title">Changer le mot de passe</h2></div>
+        <div class="card-header"><h2 class="card-title">Mot de passe</h2></div>
         <div class="card-body">
           <div class="form-group">
             <label class="form-label" for="current-pass">Mot de passe actuel</label>
@@ -85,7 +78,7 @@
           </div>
           <div class="form-group">
             <label class="form-label" for="new-pass">Nouveau mot de passe</label>
-            <input type="password" id="new-pass" class="form-control" placeholder="8 caractères minimum" autocomplete="new-password">
+            <input type="password" id="new-pass" class="form-control" autocomplete="new-password">
           </div>
           <div class="form-group">
             <label class="form-label" for="new-pass2">Confirmer le nouveau mot de passe</label>
@@ -99,14 +92,16 @@
       <div class="card mb-3">
         <div class="card-header"><h2 class="card-title">Notifications</h2></div>
         <div class="card-body">
-          <p class="text-sm text-muted mb-2">Recevez une notification dès qu'une nouvelle note est disponible pour votre enfant.</p>
-          <div class="form-check mb-2">
-            <input type="checkbox" id="notif-email" name="notif-email">
-            <label for="notif-email">Notifications par courriel</label>
-          </div>
-          <div class="form-check mb-3">
-            <input type="checkbox" id="notif-sms" name="notif-sms">
-            <label for="notif-sms">Notifications par SMS (numéro de téléphone requis)</label>
+          <p class="text-sm text-muted mb-2">Choisissez comment être notifié(e) lorsque votre enfant reçoit une nouvelle note.</p>
+          <div style="display:flex;flex-direction:column;gap:.75rem;margin-bottom:1rem">
+            <label class="form-check">
+              <input type="checkbox" id="notif-email">
+              <span>✉️ Notifications par courriel</span>
+            </label>
+            <label class="form-check">
+              <input type="checkbox" id="notif-sms">
+              <span>📱 Notifications par SMS (numéro requis)</span>
+            </label>
           </div>
           <button class="btn btn-primary" id="save-notif-btn">Enregistrer les préférences</button>
         </div>
@@ -130,10 +125,27 @@
               </div>
               <button class="btn btn-primary" id="add-child-btn" style="flex-shrink:0">Ajouter</button>
             </div>
-            <p class="text-sm text-muted mt-1">
-              Si votre enfant n'est pas encore inscrit, rendez-vous sur
-              <a href="/parent-register">la page d'inscription parent</a>.
-            </p>
+
+            <!-- Section invitation (visible si code non trouvé) -->
+            <div id="invite-section" class="hidden" style="margin-top:1rem;padding:.75rem;background:var(--bg-2);border-radius:6px;border:1px solid var(--border)">
+              <p class="text-sm" style="margin:0 0 .75rem;font-weight:600;color:var(--text-1)">Votre enfant n'est pas encore inscrit sur NotesQC.</p>
+              <p class="text-sm text-muted" style="margin:0 0 .75rem">Un lien d'attente a été créé. Envoyez-lui une invitation pour qu'il crée son compte :</p>
+              <div class="form-group" style="margin-bottom:.5rem">
+                <label class="form-label" for="invite-email">Courriel de l'enfant</label>
+                <div style="display:flex;gap:.5rem">
+                  <input type="email" id="invite-email" class="form-control" placeholder="courriel@exemple.com" style="flex:1">
+                  <button class="btn btn-secondary btn-sm" id="invite-email-btn" style="flex-shrink:0">Envoyer</button>
+                </div>
+              </div>
+              <div class="form-group" style="margin-bottom:0">
+                <label class="form-label" for="invite-phone">Numéro de téléphone (SMS)</label>
+                <div style="display:flex;gap:.5rem">
+                  <input type="tel" id="invite-phone" class="form-control" placeholder="+15141234567" style="flex:1">
+                  <button class="btn btn-secondary btn-sm" id="invite-sms-btn" style="flex-shrink:0">Envoyer SMS</button>
+                </div>
+              </div>
+            </div>
+
             <hr style="margin:.75rem 0;border-color:var(--border)">
           </div>
 
