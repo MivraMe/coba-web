@@ -13,6 +13,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   let childCreated = false;
   let parentToken = null;
   let parentId = null;
+  let pendingInviteEmail = '';
+  let pendingInvitePhone = '';
 
   function setStep(n) {
     document.querySelectorAll('.step-section').forEach(s => s.classList.remove('active'));
@@ -70,13 +72,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     setStep(1);
   });
 
-  document.getElementById('btn-wait-child').addEventListener('click', () => {
-    // Le lien en attente sera créé après inscription du parent
+  document.getElementById('btn-show-invite').addEventListener('click', () => {
+    document.getElementById('invite-form-1b').style.display = 'block';
+    document.getElementById('invite-email-1b').focus();
+  });
+
+  document.getElementById('btn-confirm-invite').addEventListener('click', () => {
+    const email = document.getElementById('invite-email-1b').value.trim();
+    const phone = document.getElementById('invite-phone-1b').value.trim();
+    if (!email && !phone) { showAlert(alert, 'Entrez au moins un courriel ou numéro de téléphone.'); return; }
+    pendingInviteEmail = email;
+    pendingInvitePhone = phone;
     foundChild = null;
     childCreated = false;
     showChildCard(null);
     setStep('3');
-    // On garde pendingPermanentCode pour créer le pending_link après inscription
+  });
+
+  document.getElementById('btn-skip-child').addEventListener('click', () => {
+    foundChild = null;
+    pendingPermanentCode = '';
+    pendingInviteEmail = '';
+    pendingInvitePhone = '';
+    childCreated = false;
+    showChildCard(null);
+    setStep('3');
   });
 
   // ── Étape 2 : Identifiants du portail ───────────────────────────────────────────────────
@@ -140,7 +160,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (pass !== pass2) { showAlert(alert, 'Les mots de passe ne correspondent pas.'); return; }
     if (pass.length < 8) { showAlert(alert, 'Le mot de passe doit comporter au moins 8 caractères.'); return; }
     if (!terms) { showAlert(alert, 'Vous devez accepter les conditions d\'utilisation.'); return; }
-    if (!foundChild && !pendingPermanentCode) { showAlert(alert, 'Aucun enfant sélectionné.'); return; }
 
     const btn = document.getElementById('register-btn');
     setLoading(btn, true, 'Création…');
@@ -171,9 +190,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     PARENT.setToken(data.token);
     PARENT.setParent(data.parent);
 
+    // Envoyer les invitations en attente si demandé depuis step-1b
+    if (pendingInviteEmail || pendingInvitePhone) {
+      const invPayload = {};
+      if (pendingInviteEmail) invPayload.child_email = pendingInviteEmail;
+      if (pendingInvitePhone) invPayload.phone = pendingInvitePhone;
+      await PARENT.request('POST', '/parent/invite-child', invPayload);
+    }
+
     if (childCreated) {
       setStep('4');
-    } else if (data.pending) {
+    } else if (data.pending || pendingPermanentCode) {
       const el = document.getElementById('pending-code-display');
       if (el) el.textContent = pendingPermanentCode ? `(${pendingPermanentCode})` : '';
       setStep('pending');
@@ -186,6 +213,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('btn-invite-email').addEventListener('click', () => {
     document.getElementById('invite-email-form').classList.remove('hidden');
+    document.getElementById('invite-sms-form').classList.add('hidden');
+  });
+
+  document.getElementById('btn-invite-sms-toggle').addEventListener('click', () => {
+    document.getElementById('invite-sms-form').classList.remove('hidden');
+    document.getElementById('invite-email-form').classList.add('hidden');
   });
 
   document.getElementById('btn-skip-invite').addEventListener('click', () => {
@@ -204,6 +237,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!res) return;
 
     showAlert(alert, 'Invitation envoyée ! Votre enfant peut maintenant créer son compte.', 'success');
+    setTimeout(() => { window.location.href = '/parent-dashboard'; }, 2000);
+  });
+
+  document.getElementById('btn-send-sms-invite').addEventListener('click', async () => {
+    const phone = document.getElementById('invite-sms-input').value.trim();
+    if (!phone) { showAlert(alert, 'Entrez un numéro de téléphone.'); return; }
+
+    const btn = document.getElementById('btn-send-sms-invite');
+    setLoading(btn, true, 'Envoi…');
+
+    const res = await PARENT.request('POST', '/parent/invite-child', { phone });
+    setLoading(btn, false, 'Envoyer le SMS');
+    if (!res) return;
+
+    showAlert(alert, 'Invitation SMS envoyée !', 'success');
     setTimeout(() => { window.location.href = '/parent-dashboard'; }, 2000);
   });
 });

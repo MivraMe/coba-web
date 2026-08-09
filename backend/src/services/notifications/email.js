@@ -13,10 +13,6 @@ function appUrl() {
 function emailWrapper(bodyHtml) {
   const base = appUrl();
 
-  // External URL is the only reliable approach across all email clients
-  // (Gmail strips CID inline images and data URIs).
-  // When APP_URL is not set, fall back to a table-based blue header
-  // (bgcolor works everywhere; CSS background on <div> is often stripped).
   const bannerHtml = base
     ? `<a href="${base}" style="display:block;text-decoration:none;line-height:0">
         <img src="${base}/logo/banner_whitetxt_blueback.png" alt="NotesQC" width="600"
@@ -69,7 +65,6 @@ function ctaButton(text, url) {
   </table>`;
 }
 
-// Table-based progress bar — bgcolor works in all email clients.
 function gradeBar(percentage) {
   const pct = Math.min(100, Math.max(0, Math.round(percentage)));
   const filledColor = pct >= 75 ? '#16a34a' : pct >= 60 ? '#d97706' : '#dc2626';
@@ -343,4 +338,32 @@ async function sendParentGradeEmail(to, { parentFirstName, childName, courseCode
   if (error) throw new Error(`Resend erreur: ${error.message}`);
 }
 
-module.exports = { sendNewGradeEmail, sendInvitationEmail, sendAdminMessage, sendPasswordResetEmail, sendChildInvitationEmail, sendParentGradeEmail };
+async function sendParentChildLinkedEmail(to, { parentFirstName, childName, dashboardUrl }) {
+  const client = getClient();
+  if (!client) {
+    console.warn('RESEND_API_KEY non configuré, courriel non envoyé');
+    return;
+  }
+
+  const body = `
+    <h2 style="margin:0 0 4px;color:#0f172a;font-size:1.25rem;font-weight:700">
+      ${childName} a rejoint NotesQC !
+    </h2>
+    <p style="margin:0 0 24px;color:#64748b;font-size:.9375rem">
+      Bonjour ${parentFirstName}, votre enfant <strong style="color:#0f172a">${childName}</strong>
+      vient de créer son compte sur NotesQC. Vous pouvez maintenant suivre ses notes directement depuis votre espace parent.
+    </p>
+    ${dashboardUrl ? ctaButton('Accéder à l\'espace parent', dashboardUrl) : ''}
+  `;
+
+  const { error } = await client.emails.send({
+    from: process.env.SMTP_FROM || 'NotesQC <noreply@notesqc.ca>',
+    to,
+    subject: `${childName} a rejoint NotesQC — NotesQC`,
+    html: emailWrapper(body),
+  });
+
+  if (error) throw new Error(`Resend erreur: ${error.message}`);
+}
+
+module.exports = { sendNewGradeEmail, sendInvitationEmail, sendAdminMessage, sendPasswordResetEmail, sendChildInvitationEmail, sendParentGradeEmail, sendParentChildLinkedEmail };

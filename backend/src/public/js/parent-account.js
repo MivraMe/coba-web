@@ -103,6 +103,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   await loadChildren();
 
+  // Event delegation pour "Retirer" — évite le problème d'encodage dans onclick avec apostrophes
+  document.getElementById('children-list').addEventListener('click', e => {
+    const btn = e.target.closest('.remove-child-btn');
+    if (!btn) return;
+    const row = btn.closest('[data-child-id]');
+    if (!row) return;
+    removeChild(parseInt(row.dataset.childId), row.dataset.childName);
+  });
+
   // Toggle formulaire d'ajout
   document.getElementById('toggle-add-child').addEventListener('click', () => {
     const form = document.getElementById('add-child-form');
@@ -193,13 +202,13 @@ async function loadChildren() {
       ? `<img src="data:image/jpeg;base64,${child.photo_base64}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;" alt="" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'avatar',textContent:'${initials}'}));">`
       : `<div class="avatar">${initials}</div>`;
 
-    return `<div class="child-row">
+    return `<div class="child-row" data-child-id="${child.id}" data-child-name="${escapeHtml(name)}">
       ${photo}
       <div class="child-info">
         <div class="child-name">${escapeHtml(name)}</div>
         <div class="child-code">Code permanent : ${escapeHtml(child.permanent_code || '—')}</div>
       </div>
-      <button class="btn btn-danger btn-sm" onclick="removeChild(${child.id}, ${JSON.stringify(name)})">Retirer</button>
+      <button class="btn btn-danger btn-sm remove-child-btn">Retirer</button>
     </div>`;
   }).join('');
 }
