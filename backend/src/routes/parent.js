@@ -7,7 +7,7 @@ const { requireParent } = require('../middleware/auth');
 const { encrypt } = require('../services/crypto');
 const { fetchNotes, fetchProfile, parseAssignment, getCanonicalSchoolYear } = require('../services/portalApi');
 const { processAssignments } = require('../services/dataSync');
-const { sendChildInvitationEmail } = require('../services/notifications/email');
+const { sendChildInvitationEmail, sendPasswordResetEmail } = require('../services/notifications/email');
 const { sendSms } = require('../services/notifications/sms');
 
 const router = express.Router();
@@ -108,7 +108,6 @@ router.post('/register', async (req, res) => {
     return res.status(400).json({ error: 'Tous les champs obligatoires doivent être remplis' });
   }
   if (password.length < 8) return res.status(400).json({ error: 'Le mot de passe doit comporter au moins 8 caractères' });
-  if (!child_user_id && !permanent_code) return res.status(400).json({ error: 'Enfant non spécifié' });
 
   try {
     let finalChildId = child_user_id || null;
@@ -576,6 +575,63 @@ router.post('/invite-child', requireParent, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Erreur lors de l\'envoi de l\'invitation' });
+  }
+});
+
+// POST /api/parent/forgot-password — public, envoie un code de réinitialisation
+router.post('/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'Courriel requis' });
+  const normalized = email.toLowerCase().trim();
+  try {
+    const { rows } = await pool.query('SELECT id, email FROM parents WHERE email = $1', [normalized]);
+    if (rows.length === 0) return res.status(404).json({ error: 'Aucun compte parent trouvé avec ce courriel' });
+    const parent = rows[0];
+
+    const { rows: recent } = await pool.query(
+      `SELECT id FROM parent_password_reset_tokens WHERE parent_id = $1 AND created_at > NOW() - INTERVAL '2 minutes' AND used_at IS NULL`,
+      [parent.id]
+    );
+    if (recent.length > 0) return res.status(429).json({ error: 'Veuillez attendre avant de demander un nouveau code' });
+
+    await pool.query('DELETE FROM parent_password_reset_tokens WHERE parent_id = $1', [parent.id]);
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    await pool.query(
+      `INSERT INTO parent_password_reset_tokens (parent_id, code, expires_at) VALUES ($1, $2, NOW() + INTERVAL '15 minutes')`,
+      [parent.id, code]
+    );
+    await sendPasswordResetEmail(parent.email, code);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST /api/parent/reset-password — public
+router.post('/reset-password', async (req, res) => {
+  const { email, code, new_password } = req.body;
+  if (!email || !code || !new_password) return res.status(400).json({ error: 'Tous les champs sont requis' });
+  if (new_password.length < 8) return res.status(400).json({ error: 'Le mot de passe doit comporter au moins 8 caractères' });
+  try {
+    const normalized = email.toLowerCase().trim();
+    const { rows } = await pool.query('SELECT id FROM parents WHERE email = $1', [normalized]);
+    if (rows.length === 0) return res.status(400).json({ error: 'Code invalide ou expiré' });
+    const parentId = rows[0].id;
+
+    const { rows: tokens } = await pool.query(
+      `SELECT id FROM parent_password_reset_tokens WHERE parent_id = $1 AND code = $2 AND expires_at > NOW() AND used_at IS NULL`,
+      [parentId, code.trim()]
+    );
+    if (tokens.length === 0) return res.status(400).json({ error: 'Code invalide ou expiré' });
+
+    const hash = await bcrypt.hash(new_password, SALT_ROUNDS);
+    await pool.query('UPDATE parents SET password_hash = $1 WHERE id = $2', [hash, parentId]);
+    await pool.query('UPDATE parent_password_reset_tokens SET used_at = NOW() WHERE id = $1', [tokens[0].id]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 

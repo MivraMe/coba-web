@@ -5,6 +5,7 @@ const { encrypt } = require('../services/crypto');
 const { fetchNotes, fetchProfile, parseAssignment, getCanonicalSchoolYear } = require('../services/portalApi');
 const { processAssignments } = require('../services/dataSync');
 const { sendSms } = require('../services/notifications/sms');
+const { sendParentChildLinkedEmail } = require('../services/notifications/email');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -196,6 +197,8 @@ router.post('/terminer', async (req, res) => {
          WHERE permanent_code = $1 AND notified = false`,
         [permanentCode]
       );
+      const childName = userRows[0]?.full_name || permanentCode;
+      const base = (process.env.APP_URL || '').replace(/\/$/, '');
       for (const link of pending) {
         await pool.query(
           `INSERT INTO parent_child_links (parent_id, child_user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
@@ -205,6 +208,25 @@ router.post('/terminer', async (req, res) => {
           `UPDATE parent_pending_links SET notified = true WHERE parent_id = $1 AND permanent_code = $2`,
           [link.parent_id, permanentCode]
         );
+        // Notifier le parent
+        const { rows: parentRows } = await pool.query(
+          'SELECT email, first_name, phone, notify_email, notify_sms FROM parents WHERE id = $1',
+          [link.parent_id]
+        );
+        const p = parentRows[0];
+        if (p) {
+          if (p.notify_email) {
+            sendParentChildLinkedEmail(p.email, {
+              parentFirstName: p.first_name,
+              childName,
+              dashboardUrl: base ? `${base}/parent-dashboard` : null,
+            }).catch(err => console.error('Erreur notification parent (email):', err.message));
+          }
+          if (p.notify_sms && p.phone) {
+            sendSms(p.phone, `NotesQC : ${childName} vient de créer son compte. Consultez votre espace parent.`)
+              .catch(err => console.error('Erreur notification parent (SMS):', err.message));
+          }
+        }
       }
     }
 

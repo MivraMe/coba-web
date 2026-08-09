@@ -72,10 +72,24 @@
       <div class="step-section" id="step-1b">
         <h2 style="font-size:1.1rem;font-weight:700;margin-bottom:.25rem">Enfant non trouvé</h2>
         <p class="text-sm text-muted mb-2">Aucun compte étudiant trouvé pour ce code permanent. Votre enfant n'est peut-être pas encore inscrit sur NotesQC.</p>
-        <div style="display:flex;flex-direction:column;gap:.75rem;margin-bottom:1rem">
+        <div style="display:flex;flex-direction:column;gap:.75rem;margin-bottom:.75rem">
           <button class="btn btn-primary btn-block" id="btn-use-portal">Entrer les identifiants du portail de mon enfant</button>
-          <button class="btn btn-ghost btn-block" id="btn-wait-child">Demander à mon enfant de s'inscrire (je serai notifié)</button>
+          <button class="btn btn-ghost btn-block" id="btn-show-invite">Inviter mon enfant à s'inscrire</button>
+          <button class="btn btn-ghost btn-block" id="btn-skip-child">Continuer sans lier un enfant</button>
           <button class="btn btn-ghost btn-block" id="btn-retry-code">Réessayer avec un autre code</button>
+        </div>
+        <!-- Formulaire d'invitation (affiché si btn-show-invite) -->
+        <div id="invite-form-1b" style="display:none;padding:.75rem;background:var(--bg-2);border-radius:6px;border:1px solid var(--border);margin-bottom:.5rem">
+          <p class="text-sm text-muted" style="margin:0 0 .75rem">L'invitation sera envoyée après votre inscription. Remplissez au moins un champ :</p>
+          <div class="form-group">
+            <label class="form-label" for="invite-email-1b">Courriel de l'enfant</label>
+            <input type="email" id="invite-email-1b" class="form-control" placeholder="enfant@exemple.com">
+          </div>
+          <div class="form-group" style="margin-bottom:.75rem">
+            <label class="form-label" for="invite-phone-1b">Numéro de téléphone (SMS)</label>
+            <input type="tel" id="invite-phone-1b" class="form-control" placeholder="+15141234567">
+          </div>
+          <button class="btn btn-primary btn-block" id="btn-confirm-invite">Continuer et créer mon compte</button>
         </div>
       </div>
 
@@ -148,6 +162,7 @@
         </p>
         <div style="display:flex;flex-direction:column;gap:.75rem;margin-bottom:1rem">
           <button class="btn btn-primary btn-block" id="btn-invite-email">Envoyer une invitation par courriel</button>
+          <button class="btn btn-secondary btn-block" id="btn-invite-sms-toggle">Envoyer une invitation par SMS</button>
           <button class="btn btn-ghost btn-block" id="btn-skip-invite">Non merci, continuer</button>
         </div>
         <div id="invite-email-form" class="hidden">
@@ -156,6 +171,13 @@
             <input type="email" id="invite-email-input" class="form-control" placeholder="enfant@exemple.com">
           </div>
           <button class="btn btn-primary btn-block" id="btn-send-invite">Envoyer l'invitation</button>
+        </div>
+        <div id="invite-sms-form" class="hidden">
+          <div class="form-group">
+            <label class="form-label" for="invite-sms-input">Numéro de téléphone de l'enfant</label>
+            <input type="tel" id="invite-sms-input" class="form-control" placeholder="+15141234567">
+          </div>
+          <button class="btn btn-primary btn-block" id="btn-send-sms-invite">Envoyer le SMS</button>
         </div>
       </div>
 

@@ -190,6 +190,17 @@ CREATE INDEX IF NOT EXISTS idx_parent_pending_links_code ON parent_pending_links
 ALTER TABLE parents ADD COLUMN IF NOT EXISTS notify_email BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE parents ADD COLUMN IF NOT EXISTS notify_sms BOOLEAN NOT NULL DEFAULT false;
 
+-- Réinitialisation de mot de passe parent
+CREATE TABLE IF NOT EXISTS parent_password_reset_tokens (
+  id SERIAL PRIMARY KEY,
+  parent_id INTEGER NOT NULL REFERENCES parents(id) ON DELETE CASCADE,
+  code VARCHAR(6) NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_parent_reset_tokens ON parent_password_reset_tokens(parent_id);
+
 -- TODO items
 CREATE TABLE IF NOT EXISTS todo_items (
   id SERIAL PRIMARY KEY,
