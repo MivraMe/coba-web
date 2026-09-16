@@ -51,5 +51,22 @@ function requireRegularUser(req, res, next) {
   next();
 }
 
-module.exports = { requireAuth, requireAdmin, requireSuperAdmin, requireRegularUser };
+function requireParent(req, res, next) {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Non authentifié' });
+  }
+  try {
+    const payload = jwt.verify(header.slice(7), process.env.JWT_SECRET);
+    if (payload.role !== 'parent') {
+      return res.status(403).json({ error: 'Accès réservé aux comptes parents' });
+    }
+    req.parent = payload;
+    next();
+  } catch {
+    res.status(401).json({ error: 'Token invalide ou expiré' });
+  }
+}
+
+module.exports = { requireAuth, requireAdmin, requireSuperAdmin, requireRegularUser, requireParent };
 

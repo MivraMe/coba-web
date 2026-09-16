@@ -293,15 +293,28 @@ router.get('/users', async (req, res) => {
       JOIN groups g ON g.id = gm.group_id
     `);
 
+    const { rows: parentLinks } = await pool.query(`
+      SELECT pcl.child_user_id, p.id AS parent_id, p.first_name, p.last_name, p.email AS parent_email
+      FROM parent_child_links pcl
+      JOIN parents p ON p.id = pcl.parent_id
+    `);
+
     const groupsByUser = new Map();
     for (const m of memberships) {
       if (!groupsByUser.has(m.user_id)) groupsByUser.set(m.user_id, []);
       groupsByUser.get(m.user_id).push({ course_code: m.course_code, course_name: m.course_name, school_year: m.school_year });
     }
 
+    const parentsByUser = new Map();
+    for (const l of parentLinks) {
+      if (!parentsByUser.has(l.child_user_id)) parentsByUser.set(l.child_user_id, []);
+      parentsByUser.get(l.child_user_id).push({ id: l.parent_id, first_name: l.first_name, last_name: l.last_name, email: l.parent_email });
+    }
+
     res.json(users.map(u => ({
       ...u,
       groups: groupsByUser.get(u.id) || [],
+      linked_parents: parentsByUser.get(u.id) || [],
     })));
   } catch (err) {
     console.error(err);
@@ -504,6 +517,105 @@ router.patch('/users/:id', requireSuperAdmin, async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'Ce courriel est déjà utilisé' });
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ── PARENTS ────────────────────────────────────────────────────────────────────
+
+// GET /api/admin/parents
+router.get('/parents', async (req, res) => {
+  try {
+    const { rows: parents } = await pool.query(`
+      SELECT id, first_name, last_name, email, phone, notify_email, notify_sms, created_at
+      FROM parents
+      ORDER BY created_at ASC
+    `);
+
+    const { rows: links } = await pool.query(`
+      SELECT pcl.parent_id, u.id AS child_id, u.full_name, u.permanent_code, u.email AS child_email
+      FROM parent_child_links pcl
+      JOIN users u ON u.id = pcl.child_user_id
+    `);
+
+    const { rows: pending } = await pool.query(`
+      SELECT parent_id, permanent_code, created_at
+      FROM parent_pending_links
+      ORDER BY created_at ASC
+    `);
+
+    const childrenByParent = new Map();
+    for (const l of links) {
+      if (!childrenByParent.has(l.parent_id)) childrenByParent.set(l.parent_id, []);
+      childrenByParent.get(l.parent_id).push({ id: l.child_id, full_name: l.full_name, permanent_code: l.permanent_code, email: l.child_email });
+    }
+
+    const pendingByParent = new Map();
+    for (const p of pending) {
+      if (!pendingByParent.has(p.parent_id)) pendingByParent.set(p.parent_id, []);
+      pendingByParent.get(p.parent_id).push({ permanent_code: p.permanent_code, created_at: p.created_at });
+    }
+
+    res.json(parents.map(p => ({
+      ...p,
+      children: childrenByParent.get(p.id) || [],
+      pending_codes: pendingByParent.get(p.id) || [],
+    })));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// PATCH /api/admin/parents/:id
+router.patch('/parents/:id', requireSuperAdmin, async (req, res) => {
+  const { id } = req.params;
+  const { first_name, last_name, email, phone } = req.body;
+  try {
+    const updates = [], values = [];
+    let idx = 1;
+    if (first_name !== undefined) { updates.push(`first_name = $${idx++}`); values.push(first_name.trim()); }
+    if (last_name !== undefined) { updates.push(`last_name = $${idx++}`); values.push(last_name.trim()); }
+    if (email !== undefined) { updates.push(`email = $${idx++}`); values.push(email.toLowerCase().trim()); }
+    if (phone !== undefined) { updates.push(`phone = $${idx++}`); values.push(phone || null); }
+    if (updates.length === 0) return res.status(400).json({ error: 'Aucune modification' });
+    values.push(id);
+    const { rows } = await pool.query(
+      `UPDATE parents SET ${updates.join(', ')} WHERE id = $${idx} RETURNING id, first_name, last_name, email, phone`,
+      values
+    );
+    if (rows.length === 0) return res.status(404).json({ error: 'Parent introuvable' });
+    res.json({ ok: true, parent: rows[0] });
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'Ce courriel est déjà utilisé' });
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// DELETE /api/admin/parents/:id
+router.delete('/parents/:id', requireSuperAdmin, async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM parents WHERE id = $1', [id]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST /api/admin/parents/:id/reset-password
+router.post('/parents/:id/reset-password', requireSuperAdmin, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const tempPassword = crypto.randomBytes(4).toString('hex');
+    const hash = await bcrypt.hash(tempPassword, 12);
+    const { rows } = await pool.query('UPDATE parents SET password_hash = $1 WHERE id = $2 RETURNING email', [hash, id]);
+    if (rows.length === 0) return res.status(404).json({ error: 'Parent introuvable' });
+    res.json({ ok: true, temp_password: tempPassword });
+  } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Erreur serveur' });
   }

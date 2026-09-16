@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mon compte — Espace parent · NotesQC</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script>(function(){var t=localStorage.getItem('coba_theme');if(t==='dark')document.documentElement.classList.add('dark');})()</script>
+  <style>
+    .child-row {
+      display: flex; align-items: center; gap: .75rem;
+      padding: .875rem; border: 1.5px solid var(--border);
+      border-radius: var(--radius); margin-bottom: .75rem;
+      background: var(--surface);
+    }
+    .child-row .avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: #7c3aed; color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size:.9rem; font-weight: 700; flex-shrink: 0;
+    }
+    .child-info { flex: 1; min-width: 0; }
+    .child-name { font-weight: 600; font-size: .9rem; }
+    .child-code { font-size: .78rem; color: var(--text-3); margin-top: .1rem; }
+    .add-child-form { display: none; margin-bottom: 1rem; }
+    .add-child-form.open { display: block; }
+  </style>
+</head>
+<body>
+  <nav class="nav" id="main-nav">
+    <a class="nav-brand" href="/parent-dashboard">
+      <img src="/logo/notesQC_white.png" alt="NotesQC" class="nav-logo">
+    </a>
+    <div class="nav-right">
+      <span class="nav-email"></span>
+      <button class="theme-btn" id="themeBtnNav" title="Basculer le thème" aria-label="Basculer le thème"><span data-theme-icon></span></button>
+      <button class="nav-logout">Déconnexion</button>
+    </div>
+  </nav>
+
+  <div class="page">
+    <div class="container">
+
+      <h1 style="font-size:1.3rem;font-weight:700;margin-bottom:1.5rem">Mon compte parent</h1>
+      <div id="alert" class="alert alert-hidden" style="margin-bottom:1rem"></div>
+
+      <!-- Profil -->
+      <div class="card mb-3">
+        <div class="card-header"><h2 class="card-title">Informations personnelles</h2></div>
+        <div class="card-body">
+          <div class="form-group">
+            <label class="form-label" for="first-name">Prénom</label>
+            <input type="text" id="first-name" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="last-name">Nom</label>
+            <input type="text" id="last-name" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="parent-email">Courriel</label>
+            <input type="email" id="parent-email" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="parent-phone">Téléphone <span class="text-muted" style="font-size:.8rem">(optionnel)</span></label>
+            <input type="tel" id="parent-phone" class="form-control" placeholder="+15141234567">
+          </div>
+          <button class="btn btn-primary" id="save-profile-btn">Enregistrer les modifications</button>
+        </div>
+      </div>
+
+      <!-- Mot de passe -->
+      <div class="card mb-3">
+        <div class="card-header"><h2 class="card-title">Mot de passe</h2></div>
+        <div class="card-body">
+          <div class="form-group">
+            <label class="form-label" for="current-pass">Mot de passe actuel</label>
+            <input type="password" id="current-pass" class="form-control" autocomplete="current-password">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="new-pass">Nouveau mot de passe</label>
+            <input type="password" id="new-pass" class="form-control" autocomplete="new-password">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="new-pass2">Confirmer le nouveau mot de passe</label>
+            <input type="password" id="new-pass2" class="form-control" autocomplete="new-password">
+          </div>
+          <button class="btn btn-primary" id="save-password-btn">Changer le mot de passe</button>
+        </div>
+      </div>
+
+      <!-- Notifications -->
+      <div class="card mb-3">
+        <div class="card-header"><h2 class="card-title">Notifications</h2></div>
+        <div class="card-body">
+          <p class="text-sm text-muted mb-2">Choisissez comment être notifié(e) lorsque votre enfant reçoit une nouvelle note.</p>
+          <div style="display:flex;flex-direction:column;gap:.75rem;margin-bottom:1rem">
+            <label class="form-check">
+              <input type="checkbox" id="notif-email">
+              <span>✉️ Notifications par courriel</span>
+            </label>
+            <label class="form-check">
+              <input type="checkbox" id="notif-sms">
+              <span>📱 Notifications par SMS (numéro requis)</span>
+            </label>
+          </div>
+          <button class="btn btn-primary" id="save-notif-btn">Enregistrer les préférences</button>
+        </div>
+      </div>
+
+      <!-- Mes enfants -->
+      <div class="card mb-3">
+        <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
+          <h2 class="card-title">Mes enfants</h2>
+          <button class="btn btn-ghost btn-sm" id="toggle-add-child">+ Ajouter un enfant</button>
+        </div>
+        <div class="card-body">
+
+          <!-- Formulaire d'ajout -->
+          <div class="add-child-form" id="add-child-form">
+            <p class="text-sm text-muted mb-2">Entrez le code permanent de votre enfant. Il doit déjà avoir un compte NotesQC.</p>
+            <div style="display:flex;gap:.5rem;align-items:flex-end">
+              <div class="form-group" style="flex:1;margin-bottom:0">
+                <label class="form-label" for="add-code">Code permanent</label>
+                <input type="text" id="add-code" class="form-control" placeholder="ex. ABCD12345678" style="text-transform:uppercase">
+              </div>
+              <button class="btn btn-primary" id="add-child-btn" style="flex-shrink:0">Ajouter</button>
+            </div>
+
+            <!-- Section invitation (visible si code non trouvé) -->
+            <div id="invite-section" class="hidden" style="margin-top:1rem;padding:.75rem;background:var(--bg-2);border-radius:6px;border:1px solid var(--border)">
+              <p class="text-sm" style="margin:0 0 .75rem;font-weight:600;color:var(--text-1)">Votre enfant n'est pas encore inscrit sur NotesQC.</p>
+              <p class="text-sm text-muted" style="margin:0 0 .75rem">Un lien d'attente a été créé. Envoyez-lui une invitation pour qu'il crée son compte :</p>
+              <div class="form-group" style="margin-bottom:.5rem">
+                <label class="form-label" for="invite-email">Courriel de l'enfant</label>
+                <div style="display:flex;gap:.5rem">
+                  <input type="email" id="invite-email" class="form-control" placeholder="courriel@exemple.com" style="flex:1">
+                  <button class="btn btn-secondary btn-sm" id="invite-email-btn" style="flex-shrink:0">Envoyer</button>
+                </div>
+              </div>
+              <div class="form-group" style="margin-bottom:0">
+                <label class="form-label" for="invite-phone">Numéro de téléphone (SMS)</label>
+                <div style="display:flex;gap:.5rem">
+                  <input type="tel" id="invite-phone" class="form-control" placeholder="+15141234567" style="flex:1">
+                  <button class="btn btn-secondary btn-sm" id="invite-sms-btn" style="flex-shrink:0">Envoyer SMS</button>
+                </div>
+              </div>
+            </div>
+
+            <hr style="margin:.75rem 0;border-color:var(--border)">
+          </div>
+
+          <div id="children-list">
+            <div class="loading-overlay"><span class="spinner spinner-dark"></span></div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="/parent-dashboard">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+      Tableau de bord
+    </a>
+    <a href="/parent-account" class="active">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+      Mon compte
+    </a>
+  </nav>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/parent-account.js"></script>
+  <script src="/js/theme.js"></script>
+  <script src="/js/cookie-banner.js"></script>
+</body>
+</html>

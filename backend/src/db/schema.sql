@@ -155,6 +155,52 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_enabled BOOLEAN NOT NULL DEFAULT
 ALTER TABLE users ADD COLUMN IF NOT EXISTS admin_totp_verified_at TIMESTAMPTZ;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_require_at_login BOOLEAN NOT NULL DEFAULT false;
 
+-- Portail parent
+CREATE TABLE IF NOT EXISTS parents (
+  id SERIAL PRIMARY KEY,
+  first_name VARCHAR(100) NOT NULL,
+  last_name VARCHAR(100) NOT NULL,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  phone VARCHAR(20),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS parent_child_links (
+  parent_id INTEGER NOT NULL REFERENCES parents(id) ON DELETE CASCADE,
+  child_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (parent_id, child_user_id)
+);
+
+CREATE TABLE IF NOT EXISTS parent_pending_links (
+  id SERIAL PRIMARY KEY,
+  parent_id INTEGER NOT NULL REFERENCES parents(id) ON DELETE CASCADE,
+  permanent_code VARCHAR(50) NOT NULL,
+  notified BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (parent_id, permanent_code)
+);
+
+CREATE INDEX IF NOT EXISTS idx_parent_child_links_parent ON parent_child_links(parent_id);
+CREATE INDEX IF NOT EXISTS idx_parent_child_links_child ON parent_child_links(child_user_id);
+CREATE INDEX IF NOT EXISTS idx_parent_pending_links_code ON parent_pending_links(permanent_code);
+
+-- Préférences de notifications parents
+ALTER TABLE parents ADD COLUMN IF NOT EXISTS notify_email BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE parents ADD COLUMN IF NOT EXISTS notify_sms BOOLEAN NOT NULL DEFAULT false;
+
+-- Réinitialisation de mot de passe parent
+CREATE TABLE IF NOT EXISTS parent_password_reset_tokens (
+  id SERIAL PRIMARY KEY,
+  parent_id INTEGER NOT NULL REFERENCES parents(id) ON DELETE CASCADE,
+  code VARCHAR(6) NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_parent_reset_tokens ON parent_password_reset_tokens(parent_id);
+
 -- TODO items
 CREATE TABLE IF NOT EXISTS todo_items (
   id SERIAL PRIMARY KEY,
@@ -166,4 +212,3 @@ CREATE TABLE IF NOT EXISTS todo_items (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CONSTRAINT todo_items_title_key UNIQUE (title)
 );
-

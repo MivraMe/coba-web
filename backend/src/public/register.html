@@ -15,6 +15,12 @@
         <p class="auth-sub">Créer un compte</p>
       </div>
 
+      <!-- Sélecteur Étudiant / Parent -->
+      <div style="display:flex;border:1.5px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;margin-bottom:1.25rem">
+        <button type="button" id="role-student" style="flex:1;padding:.5rem;font-size:.875rem;background:var(--primary);color:#fff;border:none;cursor:pointer;font-weight:600">Étudiant(e)</button>
+        <button type="button" id="role-parent" style="flex:1;padding:.5rem;font-size:.875rem;background:var(--surface);color:var(--text-2);border:none;cursor:pointer">Parent</button>
+      </div>
+
       <div id="invite-banner" style="display:none;background:var(--primary-l);border:1px solid var(--primary);border-radius:.5rem;padding:.65rem .875rem;margin-bottom:1rem;font-size:.875rem;color:var(--primary-dark)">
         <strong>Invitation acceptée.</strong> Crée ton compte pour rejoindre NotesQC.
       </div>
@@ -48,5 +54,10 @@
   <script src="/js/register.js"></script>
   <script src="/js/theme.js"></script>
   <script src="/js/cookie-banner.js"></script>
+  <script>
+    document.getElementById('role-parent').addEventListener('click', () => {
+      window.location.href = '/parent-register';
+    });
+  </script>
 </body>
 </html>

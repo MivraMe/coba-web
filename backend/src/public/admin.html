@@ -83,7 +83,7 @@
       <div id="tab-users" class="hidden">
         <div class="admin-section">
           <div class="flex-between mb-1">
-            <h3 style="margin-bottom:0">Liste des utilisateurs</h3>
+            <h3 style="margin-bottom:0">Étudiants</h3>
             <button class="btn btn-sm btn-secondary" id="users-refresh-btn">Actualiser</button>
           </div>
           <div id="users-alert" class="alert alert-hidden"></div>
@@ -92,6 +92,8 @@
               <thead>
                 <tr>
                   <th>Utilisateur</th>
+                  <th>Code permanent</th>
+                  <th>Parents liés</th>
                   <th>Inscription</th>
                   <th>Dernière synchro</th>
                   <th>Groupes</th>
@@ -100,7 +102,28 @@
                   <th>Actions</th>
                 </tr>
               </thead>
-              <tbody id="users-tbody"><tr><td colspan="7" style="color:var(--text-3);text-align:center">Chargement…</td></tr></tbody>
+              <tbody id="users-tbody"><tr><td colspan="9" style="color:var(--text-3);text-align:center">Chargement…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="admin-section" style="margin-top:1.5rem">
+          <div class="flex-between mb-1">
+            <h3 style="margin-bottom:0">Comptes parents</h3>
+          </div>
+          <div id="parents-alert" class="alert alert-hidden"></div>
+          <div style="overflow-x:auto">
+            <table class="admin-table" id="parents-table">
+              <thead>
+                <tr>
+                  <th>Parent</th>
+                  <th>Enfants liés</th>
+                  <th>Codes en attente</th>
+                  <th>Notif.</th>
+                  <th>Inscription</th>
+                </tr>
+              </thead>
+              <tbody id="parents-tbody"><tr><td colspan="5" style="color:var(--text-3);text-align:center">Chargement…</td></tr></tbody>
             </table>
           </div>
         </div>

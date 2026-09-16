@@ -91,6 +91,66 @@ const API = (() => {
   };
 })();
 
+// Parent API — uses a separate token/storage key from the student API
+const PARENT = (() => {
+  function getToken() { return localStorage.getItem('coba_parent_token'); }
+  function setToken(t) { localStorage.setItem('coba_parent_token', t); }
+  function clearToken() { localStorage.removeItem('coba_parent_token'); }
+  function getParent() {
+    try { return JSON.parse(localStorage.getItem('coba_parent_user') || 'null'); } catch { return null; }
+  }
+  function setParent(p) { localStorage.setItem('coba_parent_user', JSON.stringify(p)); }
+  function clearParent() { localStorage.removeItem('coba_parent_user'); }
+
+  function logout() {
+    clearToken(); clearParent();
+    window.location.href = '/';
+  }
+
+  async function request(method, path, body) {
+    const headers = { 'Content-Type': 'application/json' };
+    const token = getToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const opts = { method, headers };
+    if (body !== undefined) opts.body = JSON.stringify(body);
+    const res = await fetch(`/api${path}`, opts);
+    if (res.status === 401 && getToken()) { logout(); return null; }
+    return res;
+  }
+
+  async function json(method, path, body) {
+    const res = await request(method, path, body);
+    if (!res) return null;
+    return res.json();
+  }
+
+  async function requireAuth() {
+    const token = getToken();
+    if (!token) { window.location.href = '/'; return null; }
+    try {
+      const res = await request('GET', '/parent/me');
+      if (!res || !res.ok) { logout(); return null; }
+      const parent = await res.json();
+      setParent(parent);
+      return parent;
+    } catch {
+      logout(); return null;
+    }
+  }
+
+  return {
+    get: (path) => json('GET', path),
+    post: (path, body) => json('POST', path, body),
+    put: (path, body) => json('PUT', path, body),
+    delete: (path, body) => json('DELETE', path, body),
+    request,
+    getToken, setToken, clearToken,
+    getParent, setParent, clearParent,
+    logout,
+    requireAuth,
+  };
+})();
+
 // Shared UI helpers
 function showAlert(el, msg, type = 'error') {
   el.textContent = msg;
