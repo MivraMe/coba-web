@@ -197,6 +197,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('todo-modal-close').addEventListener('click', closeTodoModal);
     document.getElementById('todo-modal-cancel').addEventListener('click', closeTodoModal);
   }
+  if (isSuperAdmin) {
+    document.getElementById('edit-parent-modal-close').addEventListener('click', closeEditParentModal);
+    document.getElementById('edit-parent-modal-cancel').addEventListener('click', closeEditParentModal);
+    document.getElementById('edit-parent-modal-save').addEventListener('click', handleEditParentSave);
+  }
   document.getElementById('users-refresh-btn').addEventListener('click', loadUsers);
   document.getElementById('notif-test-btn').addEventListener('click', handleNotifTest);
   document.getElementById('sync-test-btn').addEventListener('click', handleSyncTest);
@@ -504,6 +509,7 @@ function avatarInitials(fullName, email) {
 }
 
 let _usersCache = [];
+let _parentsCache = [];
 
 async function loadUsers() {
   const tbody = document.getElementById('users-tbody');
@@ -515,7 +521,7 @@ async function loadUsers() {
   if (!users) return;
   _usersCache = users;
   renderUsersTable(users);
-  if (parents) renderParentsTable(parents);
+  if (parents) { _parentsCache = parents; renderParentsTable(parents); }
 }
 
 let _isSuperAdminView = false;
@@ -618,7 +624,7 @@ function renderParentsTable(parents) {
   const tbody = document.getElementById('parents-tbody');
   if (!tbody) return;
   if (parents.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="color:var(--text-3);text-align:center">Aucun compte parent.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text-3);text-align:center">Aucun compte parent.</td></tr>';
     return;
   }
   tbody.innerHTML = parents.map(p => {
@@ -643,6 +649,12 @@ function renderParentsTable(parents) {
     const initials = `${p.first_name[0]}${p.last_name[0]}`.toUpperCase();
     const avatarBg = avatarColor(p.email);
 
+    const actions = _isSuperAdminView ? `
+      <button class="btn btn-sm btn-secondary" onclick="openEditParentModal(${p.id})" title="Modifier">✏️</button>
+      <button class="btn btn-sm btn-secondary" onclick="resetParentPassword(${p.id})">Réinit. MDP</button>
+      <button class="btn btn-sm btn-danger" onclick="deleteParent(${p.id}, '${escapeHtml(`${p.first_name} ${p.last_name}`).replace(/'/g, '&#39;')}')">Supprimer</button>
+    ` : '';
+
     return `<tr>
       <td>
         <div style="display:flex;align-items:center;gap:.6rem">
@@ -658,6 +670,7 @@ function renderParentsTable(parents) {
       <td style="font-size:.8rem">${pendingHtml}</td>
       <td style="font-size:.85rem">${notif}</td>
       <td style="font-size:.8rem;white-space:nowrap">${created}</td>
+      <td style="display:flex;gap:.35rem;flex-wrap:wrap">${actions}</td>
     </tr>`;
   }).join('');
 }
@@ -1093,6 +1106,83 @@ async function handleTodoSave() {
   const data = res ? await res.json() : null;
   if (data && data.ok) { closeTodoModal(); loadTodo(); }
   else showAlert(alertEl, data?.error || 'Erreur lors de la sauvegarde.');
+}
+
+// ── MODAL ÉDITION PARENT ──────────────────────────────────────────────────────
+
+function openEditParentModal(parentId) {
+  const p = _parentsCache.find(x => x.id === parentId);
+  if (!p) return;
+  document.getElementById('edit-parent-id').value = p.id;
+  document.getElementById('edit-parent-first').value = p.first_name || '';
+  document.getElementById('edit-parent-last').value = p.last_name || '';
+  document.getElementById('edit-parent-email').value = p.email || '';
+  document.getElementById('edit-parent-phone').value = p.phone || '';
+  hideAlert(document.getElementById('edit-parent-alert'));
+  document.getElementById('edit-parent-modal').classList.remove('hidden');
+}
+
+function closeEditParentModal() {
+  document.getElementById('edit-parent-modal').classList.add('hidden');
+}
+
+async function handleEditParentSave() {
+  const alertEl = document.getElementById('edit-parent-alert');
+  hideAlert(alertEl);
+  const id = document.getElementById('edit-parent-id').value;
+  const btn = document.getElementById('edit-parent-modal-save');
+  const body = {
+    first_name: document.getElementById('edit-parent-first').value.trim(),
+    last_name: document.getElementById('edit-parent-last').value.trim(),
+    email: document.getElementById('edit-parent-email').value.trim(),
+    phone: document.getElementById('edit-parent-phone').value.trim() || null,
+  };
+  if (!body.first_name || !body.last_name || !body.email) {
+    showAlert(alertEl, 'Prénom, nom et courriel sont obligatoires.'); return;
+  }
+  setLoading(btn, true, 'Sauvegarde…');
+  const res = await API.request('PATCH', `/admin/parents/${id}`, body);
+  setLoading(btn, false, 'Sauvegarder');
+  const data = res ? await res.json() : null;
+  if (data && data.ok) {
+    closeEditParentModal();
+    showAlert(document.getElementById('parents-alert'), 'Compte parent mis à jour.', 'success');
+    loadUsers();
+  } else {
+    showAlert(alertEl, data?.error || 'Erreur lors de la sauvegarde.');
+  }
+}
+
+async function deleteParent(parentId, name) {
+  if (!confirm(`Supprimer définitivement le compte de ${name} ? Cette action est irréversible.`)) return;
+  const alertEl = document.getElementById('parents-alert');
+  hideAlert(alertEl);
+  const res = await API.request('DELETE', `/admin/parents/${parentId}`);
+  const data = res ? await res.json() : null;
+  if (data && data.ok) {
+    showAlert(alertEl, `Compte de ${name} supprimé.`, 'success');
+    loadUsers();
+  } else {
+    showAlert(alertEl, data?.error || 'Erreur lors de la suppression.');
+  }
+}
+
+async function resetParentPassword(parentId) {
+  if (!confirm('Générer un mot de passe temporaire pour ce parent ? Le mot de passe actuel sera remplacé.')) return;
+  const alertEl = document.getElementById('parents-alert');
+  hideAlert(alertEl);
+  const res = await API.request('POST', `/admin/parents/${parentId}/reset-password`, {});
+  const data = res ? await res.json() : null;
+  if (data && data.ok) {
+    const pwd = escapeHtml(data.temp_password);
+    alertEl.className = 'alert alert-info';
+    alertEl.classList.remove('hidden');
+    alertEl.innerHTML = `Mot de passe temporaire (une seule fois) : <strong>${pwd}</strong> ` +
+      `<button onclick="navigator.clipboard.writeText('${pwd}').then(()=>this.textContent='✓')" ` +
+      `style="border:none;background:none;cursor:pointer;font-size:.95rem" title="Copier">📋</button>`;
+  } else {
+    showAlert(alertEl, data?.error || 'Erreur lors de la réinitialisation.');
+  }
 }
 
 async function deleteTodoItem(id) {

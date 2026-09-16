@@ -121,9 +121,10 @@
                   <th>Codes en attente</th>
                   <th>Notif.</th>
                   <th>Inscription</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
-              <tbody id="parents-tbody"><tr><td colspan="5" style="color:var(--text-3);text-align:center">Chargement…</td></tr></tbody>
+              <tbody id="parents-tbody"><tr><td colspan="6" style="color:var(--text-3);text-align:center">Chargement…</td></tr></tbody>
             </table>
           </div>
         </div>
@@ -533,6 +534,42 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" id="contact-modal-cancel">Annuler</button>
         <button class="btn btn-primary" id="contact-modal-send">Envoyer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MODAL ÉDITION PARENT ── -->
+  <div id="edit-parent-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Modifier le compte parent</h3>
+        <button class="modal-close-btn" id="edit-parent-modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="edit-parent-alert" class="alert alert-hidden mb-1"></div>
+        <input type="hidden" id="edit-parent-id">
+        <div class="config-grid">
+          <div class="form-group">
+            <label class="form-label">Prénom</label>
+            <input type="text" class="form-control" id="edit-parent-first" placeholder="Prénom">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Nom</label>
+            <input type="text" class="form-control" id="edit-parent-last" placeholder="Nom">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Courriel</label>
+            <input type="email" class="form-control" id="edit-parent-email">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Téléphone</label>
+            <input type="tel" class="form-control" id="edit-parent-phone" placeholder="+15141234567">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="edit-parent-modal-cancel">Annuler</button>
+        <button class="btn btn-primary" id="edit-parent-modal-save">Sauvegarder</button>
       </div>
     </div>
   </div>
